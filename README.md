@@ -91,7 +91,7 @@ Since this project uses pnpm, add the following to your `package.json`:
 ```json
 {
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   },
   "corepack": {
     "enable": true
@@ -147,6 +147,7 @@ heroku config
 ### Troubleshooting
 
 **Build fails with memory issues:**
+
 ```bash
 heroku config:set NODE_OPTIONS="--max_old_space_size=2560"
 ```
