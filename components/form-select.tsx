@@ -11,17 +11,18 @@ import { isFieldRequired } from "@/lib/helpers";
 import * as z from "zod";
 import { Icon } from "./icon";
 import { IconName } from "@/models/icons";
+import { cn } from "@/lib/utils";
 
 interface Props<T extends FieldValues> {
   items: {
-    item: string | React.ReactNode | ((item: T) => React.ReactNode);
+    item: React.ReactNode;
     value: string;
   }[];
   control: Control<T>;
   name: Path<T>;
   schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
   id: string;
-  label: string | React.ReactNode;
+  label?: React.ReactNode;
   placeholder: string;
   defaultValue?: string;
   labelAddon?: React.ReactNode;
@@ -29,10 +30,9 @@ interface Props<T extends FieldValues> {
   fieldRequired?: boolean;
   startIcon?: IconName;
   disabled?: boolean;
-  render?: React.ReactElement<
-    unknown,
-    string | React.JSXElementConstructor<any>
-  >;
+  labelContainerClassName?: string;
+  fieldClassName?: string;
+  anchorWidth?: boolean;
 }
 
 function FormSelect<T extends FieldValues>({
@@ -49,7 +49,9 @@ function FormSelect<T extends FieldValues>({
   fieldRequired,
   startIcon,
   disabled,
-  render,
+  labelContainerClassName,
+  fieldClassName,
+  anchorWidth,
 }: Props<T>) {
   const isRequired = fieldRequired ?? isFieldRequired(schema, name);
 
@@ -58,17 +60,24 @@ function FormSelect<T extends FieldValues>({
       name={name}
       control={control}
       render={({ field, fieldState }) => (
-        <Field data-invalid={fieldState.invalid}>
-          <div className="flex items-center justify-between gap-1">
-            <FieldLabel
-              htmlFor={id}
-              className="font-medium label-small gap-0.5"
+        <Field data-invalid={fieldState.invalid} className={fieldClassName}>
+          {!!label && (
+            <div
+              className={cn(
+                "flex items-center justify-between gap-1",
+                labelContainerClassName,
+              )}
             >
-              <span className="text-(--text--strong-950)">{label}</span>
-              {isRequired && <span className="text-destructive">*</span>}
-            </FieldLabel>
-            {labelAddon}
-          </div>
+              <FieldLabel
+                htmlFor={id}
+                className="font-medium label-small gap-0.5"
+              >
+                <span className="text-(--text--strong-950)">{label}</span>
+                {isRequired && <span className="text-destructive">*</span>}
+              </FieldLabel>
+              {labelAddon}
+            </div>
+          )}
           <Select
             onValueChange={(value) => {
               field.onChange(value);
@@ -86,14 +95,20 @@ function FormSelect<T extends FieldValues>({
               {!!startIcon && (
                 <Icon name={startIcon} className="text-(--icon--soft-400)" />
               )}
-              <SelectValue placeholder={placeholder} render={render} />
+              <SelectValue placeholder={placeholder}>
+                {(value: string) =>
+                  items.find((item) => item.value === value)?.item ?? (
+                    <span className="text-(--text--soft-400) paragraph-small font-normal">
+                      {placeholder}
+                    </span>
+                  )
+                }
+              </SelectValue>
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent anchorWidth={anchorWidth}>
               {items.map((item) => (
                 <SelectItem key={item.value} value={item.value}>
-                  {typeof item.item === "function"
-                    ? item.item(field.value)
-                    : item.item}
+                  {item.item}
                 </SelectItem>
               ))}
             </SelectContent>

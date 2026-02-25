@@ -5,7 +5,12 @@ import React from "react";
 import { Control, Controller, FieldValues, Path } from "react-hook-form";
 import * as z from "zod";
 import { Field, FieldError, FieldLabel } from "./ui/field";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupTextarea,
+} from "./ui/input-group";
 import { IconName } from "@/models/icons";
 import { Icon } from "./icon";
 import { Button } from "./ui/button";
@@ -27,6 +32,8 @@ interface Props<T extends FieldValues> extends React.ComponentProps<"input"> {
   fieldRequired?: boolean;
   startAddon?: React.ReactNode;
   endAddon?: React.ReactNode;
+  labelContainerClassName?: string;
+  fieldClassName?: string;
 }
 
 function FormInput<T extends FieldValues>({
@@ -48,6 +55,8 @@ function FormInput<T extends FieldValues>({
   fieldRequired,
   startAddon,
   endAddon,
+  labelContainerClassName,
+  fieldClassName,
   ...props
 }: Props<T>) {
   const isRequired = fieldRequired ?? isFieldRequired(schema, name);
@@ -58,9 +67,17 @@ function FormInput<T extends FieldValues>({
       name={name}
       control={control}
       render={({ field, fieldState }) => (
-        <Field data-invalid={fieldState.invalid} className="relative">
+        <Field
+          data-invalid={fieldState.invalid}
+          className={cn("relative", fieldClassName)}
+        >
           {label ? (
-            <div className="flex items-center justify-between gap-1">
+            <div
+              className={cn(
+                "flex items-center justify-between gap-1",
+                labelContainerClassName,
+              )}
+            >
               <FieldLabel
                 htmlFor={id}
                 className="label-small text-(--text--strong-950) gap-0.5"
@@ -79,32 +96,47 @@ function FormInput<T extends FieldValues>({
                 {startAddon ? startAddon : <Icon name={startIcon!} />}
               </InputGroupAddon>
             ) : null}
-            <InputGroupInput
-              id={id}
-              name={field.name}
-              aria-invalid={fieldState.invalid}
-              placeholder={placeholder}
-              autoComplete={autoComplete}
-              className="h-full"
-              type={
-                type === "password"
-                  ? showPassword
-                    ? "text"
-                    : "password"
-                  : type
-              }
-              onChange={(e) => {
-                if (type === "file" && e.target.files) {
-                  field.onChange(e.target.files);
-                } else {
-                  field.onChange(e);
+            {type === "textarea" ? (
+              <InputGroupTextarea
+                id={id}
+                name={field.name}
+                aria-invalid={fieldState.invalid}
+                placeholder={placeholder}
+                className="h-full min-h-20"
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                value={field.value ?? ""}
+                ref={field.ref as any}
+                {...(props as any)}
+              />
+            ) : (
+              <InputGroupInput
+                id={id}
+                name={field.name}
+                aria-invalid={fieldState.invalid}
+                placeholder={placeholder}
+                autoComplete={autoComplete}
+                className="h-full"
+                type={
+                  type === "password"
+                    ? showPassword
+                      ? "text"
+                      : "password"
+                    : type
                 }
-              }}
-              onBlur={field.onBlur}
-              value={type === "file" ? undefined : (field.value ?? "")}
-              ref={field.ref}
-              {...props}
-            />
+                onChange={(e) => {
+                  if (type === "file" && e.target.files) {
+                    field.onChange(e.target.files);
+                  } else {
+                    field.onChange(e);
+                  }
+                }}
+                onBlur={field.onBlur}
+                value={type === "file" ? undefined : (field.value ?? "")}
+                ref={field.ref}
+                {...props}
+              />
+            )}
             {endIcon || type === "password" || endAddon ? (
               <InputGroupAddon
                 className={cn("text-(--icon--soft-400)", iconClassName)}
