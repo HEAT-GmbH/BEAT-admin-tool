@@ -5,7 +5,7 @@ import { Button } from "./ui/button";
 
 interface Props {
   title: string;
-  description: string;
+  description?: string;
   onClose: () => void;
 }
 
@@ -14,7 +14,11 @@ export const RightDialogHeader = ({ title, description, onClose }: Props) => {
     <div className="w-full p-5 flex items-start justify-between gap-2">
       <div className="space-y-1">
         <h2 className="label-large">{title}</h2>
-        <p className="paragraph-small text-(--text--sub-600)">{description}</p>
+        {!!description && (
+          <p className="paragraph-small text-(--text--sub-600)">
+            {description}
+          </p>
+        )}
       </div>
       <Button
         variant="ghost"

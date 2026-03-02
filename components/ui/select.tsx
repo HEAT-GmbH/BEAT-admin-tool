@@ -49,7 +49,7 @@ function SelectTrigger({
         "[&_svg:not([class*='size-'])]:size-4 flex w-fit items-center justify-between whitespace-nowrap outline-none",
         "disabled:cursor-not-allowed *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex",
         "*:data-[slot=select-value]:items-center [&_svg]:pointer-events-none [&_svg]:shrink-0",
-        "text-(--text--sub-600) disabled:text-muted-foreground disabled:bg-muted",
+        "text-(--text--sub-600) disabled:text-muted-foreground disabled:bg-muted bg-white",
         className,
       )}
       {...props}
@@ -72,12 +72,15 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = true,
+  anchorWidth = true,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
-  >) {
+  > & {
+    anchorWidth?: boolean;
+  }) {
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -96,9 +99,10 @@ function SelectContent({
             "data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2",
             "data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
             "ring-foreground/10 min-w-36 rounded-lg shadow-md ring-1 duration-100 data-[side=inline-start]:slide-in-from-right-2",
-            "data-[side=inline-end]:slide-in-from-left-2 relative isolate z-50 max-h-(--available-height) w-(--anchor-width)",
+            "data-[side=inline-end]:slide-in-from-left-2 relative isolate z-50 max-h-(--available-height)",
             "origin-(--transform-origin) overflow-x-hidden overflow-y-auto data-[align-trigger=true]:animate-none",
             "p-2 rounded-[1rem]",
+            anchorWidth ? "w-(--anchor-width)" : "",
             className,
           )}
           {...props}

@@ -1,4 +1,5 @@
 "use client";
+import { AddBuildingStepConfig } from "@/models/building";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -10,10 +11,9 @@ import {
   useEffectEvent,
   useTransition,
 } from "react";
-import { FormProvider, useForm } from "react-hook-form";
-import { STEPS } from "./step-lists";
-import { AddBuildingStepConfig } from "@/models/building";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { schema, type AddBuildingForm } from "./schema";
+import { STEPS } from "./step-lists";
 
 interface AddBuildingContext {
   stepBadge: { current: number; total: number } | null;
@@ -47,6 +47,10 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { handleSubmit, control, ...methods } = useForm<AddBuildingForm>({
+    resolver: zodResolver(schema),
+    mode: "onBlur",
+  });
 
   const goBack = () => {
     let path = "/add-building";
@@ -54,14 +58,27 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       if (activeSubStep.id > 1) {
         path +=
           activeMainStep.path +
-          activeMainStep.steps?.[activeSubStep.id - 1].path;
+          activeMainStep.steps?.[activeSubStep.id - 2].path;
       } else {
-        path += activeMainStep.path;
+        if (activeMainStep.id === 1) {
+          startTransition(() => {
+            router.back();
+          });
+          return;
+        } else {
+          const nextMain = STEPS[activeMainStep.id - 2];
+          if (!nextMain.steps) {
+            path += nextMain.path;
+          } else {
+            path +=
+              nextMain.path + nextMain.steps[nextMain.steps.length - 1].path;
+          }
+        }
       }
     }
     if (!activeSubStep && activeMainStep) {
       if (activeMainStep.id > 1) {
-        path += STEPS[activeMainStep.id - 1].path;
+        path += STEPS[activeMainStep.id - 2].path;
       } else {
         startTransition(() => {
           router.back();
@@ -77,19 +94,18 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
   const skip = () => {
     let path = "/add-building";
     if (activeSubStep && activeMainStep) {
-      if (activeSubStep.id < activeMainStep.steps!.length + 1) {
+      if (activeSubStep.id < activeMainStep.steps!.length) {
         path +=
-          activeMainStep.path +
-          activeMainStep.steps?.[activeSubStep.id + 1].path;
+          activeMainStep.path + activeMainStep.steps?.[activeSubStep.id].path;
       } else {
         if (activeMainStep.id < STEPS.length + 1) {
-          path += STEPS[activeMainStep.id + 1].path;
+          path += STEPS[activeMainStep.id].path;
         } else return;
       }
     }
     if (!activeSubStep && activeMainStep) {
       if (activeMainStep.id < STEPS.length + 1) {
-        path += STEPS[activeMainStep.id + 1].path;
+        path += STEPS[activeMainStep.id].path;
       } else {
         startTransition(() => {
           router.back();
@@ -105,13 +121,12 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
   const next = () => {
     let path = "/add-building";
     if (activeSubStep && activeMainStep) {
-      if (activeSubStep.id < activeMainStep.steps!.length + 1) {
+      if (activeSubStep.id < activeMainStep.steps!.length) {
         path +=
-          activeMainStep.path +
-          activeMainStep.steps?.[activeSubStep.id + 1].path;
+          activeMainStep.path + activeMainStep.steps?.[activeSubStep.id].path;
       } else {
         if (activeMainStep.id < STEPS.length + 1) {
-          path += STEPS[activeMainStep.id + 1].path;
+          path += STEPS[activeMainStep.id].path;
         } else {
           handleSubmit(onSubmit)();
           return;
@@ -120,7 +135,7 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
     }
     if (!activeSubStep && activeMainStep) {
       if (activeMainStep.id < STEPS.length + 1) {
-        path += STEPS[activeMainStep.id + 1].path;
+        path += STEPS[activeMainStep.id].path;
       } else {
         handleSubmit(onSubmit)();
         return;
@@ -155,22 +170,47 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
     return false;
   };
 
-  const { getFieldState, handleSubmit, ...methods } = useForm<AddBuildingForm>({
-    resolver: zodResolver(schema),
+  const buildingInformation = useWatch({
+    control,
+    name: "buildingInformation",
+  });
+  const operationalDetails = useWatch({
+    control,
+    name: "operationalDetails",
   });
 
   const completed: Record<string, boolean> = {
-    "1": getFieldState("buildingInformation").invalid,
-    "1-1": getFieldState("buildingInformation.buildingNameLocation").invalid,
-    "1-2": getFieldState("buildingInformation.buildingDetails").invalid,
-    "2": getFieldState("operationalDetails").invalid,
-    "2-1": getFieldState("operationalDetails.operationalScheduleTemperature")
-      .invalid,
-    "2-2": getFieldState("operationalDetails.coolingSystem").invalid,
-    "2-3": getFieldState("operationalDetails.ventilationSystem").invalid,
-    "2-4": getFieldState("operationalDetails.lightingSystem").invalid,
-    "2-5": getFieldState("operationalDetails.liftEscalatorSystem").invalid,
-    "2-6": getFieldState("operationalDetails.hotWaterSystem").invalid,
+    "1": !!schema.shape.buildingInformation.safeParse(buildingInformation)
+      .success,
+    "1-1":
+      !!schema.shape.buildingInformation.shape.buildingNameLocation.safeParse(
+        buildingInformation?.buildingNameLocation,
+      ).success,
+    "1-2": !!schema.shape.buildingInformation.shape.buildingDetails.safeParse(
+      buildingInformation?.buildingDetails,
+    ).success,
+    "2": !!schema.shape.operationalDetails.safeParse(operationalDetails)
+      .success,
+    "2-1":
+      !!schema.shape.operationalDetails.shape.operationalScheduleTemperature.safeParse(
+        operationalDetails?.operationalScheduleTemperature,
+      ).success,
+    "2-2": !!schema.shape.operationalDetails.shape.coolingSystem.safeParse(
+      operationalDetails?.coolingSystem,
+    ).success,
+    "2-3": !!schema.shape.operationalDetails.shape.ventilationSystem.safeParse(
+      operationalDetails?.ventilationSystem,
+    ).success,
+    "2-4": !!schema.shape.operationalDetails.shape.lightingSystem.safeParse(
+      operationalDetails?.lightingSystem,
+    ).success,
+    "2-5":
+      !!schema.shape.operationalDetails.shape.liftEscalatorSystem.safeParse(
+        operationalDetails?.liftEscalatorSystem,
+      ).success,
+    "2-6": !!schema.shape.operationalDetails.shape.hotWaterSystem.safeParse(
+      operationalDetails?.hotWaterSystem,
+    ).success,
   };
 
   const onSubmit = (data: AddBuildingForm) => {
@@ -222,11 +262,7 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
         startTransition,
       }}
     >
-      <FormProvider
-        getFieldState={getFieldState}
-        handleSubmit={handleSubmit}
-        {...methods}
-      >
+      <FormProvider handleSubmit={handleSubmit} control={control} {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="w-full">
           {children}
         </form>

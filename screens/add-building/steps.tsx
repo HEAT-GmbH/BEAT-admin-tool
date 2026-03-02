@@ -16,7 +16,11 @@ export const AddBuildingSteps = () => {
         <div key={step.id} className="flex items-stretch gap-2.25">
           <div className="flex flex-col items-center gap-1">
             {completed[`${step.id}`] ? (
-              <Icon name="check-fill" size={18} />
+              <Icon
+                name="select-box-circle-fill"
+                size={18}
+                color="var(--primary-green)"
+              />
             ) : (
               <div
                 className={cn(
@@ -64,12 +68,17 @@ export const AddBuildingSteps = () => {
                 >
                   <div className="px-1 py-1.5 flex items-center gap-1">
                     {!!completed[`${step.id}-${subStep.id}`] && (
-                      <Icon name="check-fill" size={12} />
+                      <Icon
+                        name="select-box-circle-fill"
+                        size={12}
+                        color="var(--primary-green)"
+                      />
                     )}
                     <p
                       className={cn(
                         "text-xs/3.5 text-(--text--sub-600)",
                         activeSubStep?.id === subStep.id &&
+                          activeMainStep?.id === step.id &&
                           "text-(--stroke--strong-950)",
                       )}
                     >

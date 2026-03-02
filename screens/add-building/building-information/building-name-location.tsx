@@ -1,17 +1,19 @@
 "use client";
 
 import { useFormContext, useWatch } from "react-hook-form";
-import { AddBuildingForm, schema } from "../../schema";
+import { AddBuildingForm, schema } from "../schema";
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
 import { Icon } from "@/components/icon";
 import { countriesService } from "@/services/countries.service";
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { CircleFlag } from "react-circle-flags";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMounted } from "@/hooks/use-is-mounted";
 
 export function BuildingNameLocationScreen() {
   const { control, setValue } = useFormContext<AddBuildingForm>();
+  const mounted = useIsMounted();
 
   const countries = countriesService.getCountries().map(({ code, name }) => ({
     item: (
@@ -46,7 +48,7 @@ export function BuildingNameLocationScreen() {
   });
 
   const countryEvent = useEffectEvent((c: string) => {
-    if (c) {
+    if (mounted && c) {
       setValue("buildingInformation.buildingNameLocation.region", "");
       setValue("buildingInformation.buildingNameLocation.city", "");
     }
@@ -57,7 +59,7 @@ export function BuildingNameLocationScreen() {
   }, [country]);
 
   const regionEvent = useEffectEvent((r: string) => {
-    if (r) {
+    if (mounted && r) {
       setValue("buildingInformation.buildingNameLocation.city", "");
     }
   });
@@ -148,26 +150,22 @@ export function BuildingNameLocationScreen() {
           startIcon="global-line"
         />
       </div>
-      <div className="col-span-1">
-        <FormInput
-          name="buildingInformation.buildingNameLocation.longitude"
-          id="building-longitude"
-          label="Longitude (Optional)"
-          placeholder="eg. 000000"
-          control={control}
-          schema={schema}
-        />
-      </div>
-      <div className="col-span-1">
-        <FormInput
-          name="buildingInformation.buildingNameLocation.latitude"
-          id="building-latitude"
-          label="Latitude (Optional)"
-          placeholder="eg. 000000"
-          control={control}
-          schema={schema}
-        />
-      </div>
+      <FormInput
+        name="buildingInformation.buildingNameLocation.longitude"
+        id="building-longitude"
+        label="Longitude (Optional)"
+        placeholder="eg. 000000"
+        control={control}
+        schema={schema}
+      />
+      <FormInput
+        name="buildingInformation.buildingNameLocation.latitude"
+        id="building-latitude"
+        label="Latitude (Optional)"
+        placeholder="eg. 000000"
+        control={control}
+        schema={schema}
+      />
     </section>
   );
 }

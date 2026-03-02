@@ -185,5 +185,5 @@ html,body {
 }
 
 .right-side-dialog {
-  @apply p-0 w-full max-w-183! h-[calc(100vh-30px)] flex flex-col left-auto right-3.5 translate-x-0 data-open:slide-in-from-right;
+  @apply p-0 w-full max-w-183! h-[calc(100vh-30px)] flex flex-col left-auto right-3.5 translate-x-0 data-open:slide-in-from-right overflow-hidden;
 }
