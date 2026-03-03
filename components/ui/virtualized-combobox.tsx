@@ -58,20 +58,43 @@ export function VirtualizedCombobox({
   const listHeight = Math.min(filteredOptions.length * ITEM_HEIGHT, MAX_HEIGHT);
 
   return (
-    <Combobox
-      items={options}
-      value={value}
-      onValueChange={onValueChange}
-      onInputValueChange={setSearch}
-    >
+    <Combobox value={value} onValueChange={onValueChange}>
       <ComboboxTrigger className={cn("w-full", className)}>
-        <ComboboxValue placeholder={placeholder} />
+        <ComboboxValue placeholder={placeholder}>
+          {(value) => {
+            const option = options.find((option) => option.value === value);
+            return option ? (
+              <>
+                {option.icon ? (
+                  <span className="flex items-center justify-center gap-2">
+                    {option.icon}
+                    <span
+                      className={cn(
+                        "text-foreground text-ellipsis overflow-hidden whitespace-nowrap",
+                        (!value || value.toLowerCase() === "all") &&
+                          "text-(--text--sub-600)",
+                      )}
+                    >
+                      {option.label}
+                    </span>
+                  </span>
+                ) : (
+                  option.label
+                )}
+              </>
+            ) : (
+              <span className="text-(--text--sub-600)">{placeholder}</span>
+            );
+          }}
+        </ComboboxValue>
       </ComboboxTrigger>
       <ComboboxContent>
         <InputWithIcon
           startIcon="search-2-line"
           placeholder={searchPlaceholder}
           groupClassName="w-full h-9 m-0! bg-white! border-border!"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
         />
         <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
         <div

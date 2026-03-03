@@ -35,7 +35,7 @@ function ComboboxTrigger({
       {...props}
     >
       {children}
-      <ChevronDownIcon className="text-muted-foreground size-4 pointer-events-none" />
+      <ChevronDownIcon className="text-muted-foreground size-4 pointer-events-none ml-auto shrink-0" />
     </ComboboxPrimitive.Trigger>
   );
 }
