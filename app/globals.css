@@ -148,6 +148,14 @@ html,body {
   }
 }
 
+@utility rad-* {
+  border-radius: calc(var(--spacing) * --value(number)); 
+}
+
+@utility text-size-* {
+  font-size: calc(var(--spacing) * --value(number));
+}
+
 .paragraph-x-small {
   font-size: 0.75rem;
   line-height: 1rem;

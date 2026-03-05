@@ -1,5 +1,5 @@
 // Auto-generated file - do not edit manually
-// Generated on: 2026-03-01T20:24:23.037Z
+// Generated on: 2026-03-02T10:18:49.443Z
 
 export type IconName =
   | 'add-large-fill'
@@ -61,6 +61,7 @@ export type IconName =
   | 'information-fill'
   | 'leaf-fill'
   | 'leaf-line'
+  | 'lightbulb-flash-line'
   | 'lightbulb-line'
   | 'list-indefinite'
   | 'list-settings-fill'
@@ -72,6 +73,7 @@ export type IconName =
   | 'menu-search-line'
   | 'more-2-line'
   | 'oil-line'
+  | 'outlet-2-line'
   | 'pushpin-fill'
   | 'question-line'
   | 'rainy-line'
@@ -83,9 +85,11 @@ export type IconName =
   | 'settings-4-line'
   | 'settings-5-line'
   | 'snowflake-fill'
+  | 'snowflake-line'
   | 'stairs-line'
   | 'sun-foggy-fill'
   | 'temp-cold-line'
+  | 'temp-hot-line'
   | 'upload-cloud-2-line'
   | 'user-6-line'
   | 'user-settings-fill'

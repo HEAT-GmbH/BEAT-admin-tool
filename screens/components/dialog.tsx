@@ -31,6 +31,7 @@ export const SSDialog = ({
           title={title}
           description={description}
           onClose={() => onOpenChange(false)}
+          className="border-b border-(--stroke--soft-200)"
         />
         {children}
         <div className="p-4 border-t border-(--stroke--soft-200) flex justify-end gap-3 bg-white mt-auto">
