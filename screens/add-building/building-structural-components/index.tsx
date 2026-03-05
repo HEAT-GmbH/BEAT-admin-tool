@@ -10,6 +10,7 @@ import {
   BoQData,
   StructuralComponentData,
 } from "../schema";
+import { EPD } from "@/models/epd";
 import { useState } from "react";
 import { SystemWithItems } from "@/components/system-with-items";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -61,6 +62,16 @@ export function BuildingStructuralComponentsScreen() {
       isPublic: false,
       materials: [],
     },
+  });
+
+  const { append: appendBoqMaterial } = useFieldArray({
+    control: boqControl,
+    name: "materials",
+  });
+
+  const { append: appendCompMaterial } = useFieldArray({
+    control: compControl,
+    name: "materials",
   });
 
   const handleAddNewBoQ = () => {
@@ -119,10 +130,23 @@ export function BuildingStructuralComponentsScreen() {
     setIsCompOpen(false);
   };
 
-  const handleAddMaterial = (materials: Material[]) => {
-    // This would be called from EpdLibraryDialog
-    // For now we just close it
+  const handleAddMaterial = (items: (EPD & { quantity: number })[]) => {
+    const materials: Material[] = items.map((item) => ({
+      name: item.name,
+      category: "others",
+      quantity: item.quantity,
+      unit: "kg",
+      country: item.country,
+    }));
+
+    if (isBoQOpen) {
+      materials.forEach((m) => appendBoqMaterial(m));
+    } else if (isCompOpen) {
+      materials.forEach((m) => appendCompMaterial(m));
+    }
+
     setIsEpdOpen(false);
+    return "success" as const;
   };
 
   const ctaSection = (
@@ -204,7 +228,7 @@ export function BuildingStructuralComponentsScreen() {
       <EpdLibraryDialog
         isOpen={isEpdOpen}
         onOpenChange={setIsEpdOpen}
-        // onAdd={handleAddMaterial} // Add this prop to EpdLibraryDialog when implemented
+        onSubmit={handleAddMaterial}
       />
     </>
   );

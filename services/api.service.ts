@@ -4,8 +4,18 @@ import { DUMMY_ORGANIZATIONS } from "@/constants/dummy-organizations";
 import { delay } from "@/lib/helpers";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
+import { Organization } from "@/models/organization";
 import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
-import { OperationalDataEntry } from "@/screens/add-building/schema";
+import { OperationalDataEntry, Material } from "@/screens/add-building/schema";
+import { EPD } from "@/models/epd";
+import { DUMMY_EPDS } from "@/constants/dummy-epds";
+import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
+import { DUMMY_COUNTRY_SETTINGS } from "@/constants/dummy-country-settings";
+import { CountrySetting } from "@/models/country-setting";
+import { ClimateType } from "@/models/climate-type";
+import { DUMMY_CLIMATE_TYPES } from "@/constants/dummy-client-types";
+import { BuildingType } from "@/models/building-type";
+import { DUMMY_SYSTEM_BUILDINGS } from "@/constants/dummy-system-buildings";
 
 class ApiService {
   user: User | null = null;
@@ -32,13 +42,57 @@ class ApiService {
     return this.user;
   }
 
-  async fetchOrganizations(query: string) {
+  async getOrganizations(params: {
+    search?: string;
+    industry?: string;
+    location?: string;
+    assignedTo?: string;
+    currentPage: number;
+    pageSize: number;
+  }): Promise<{
+    organizations: Organization[];
+    currentPage: number;
+    totalOrganizations: number;
+  } | null> {
     await delay(1000);
-    if (!query) return DUMMY_ORGANIZATIONS;
-    const organizations = DUMMY_ORGANIZATIONS.filter((org) =>
-      org.name.toLowerCase().includes(query.toLowerCase()),
+    let filteredOrgs = [...DUMMY_ORGANIZATIONS];
+
+    if (params.search) {
+      filteredOrgs = filteredOrgs.filter((org) =>
+        org.name.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+
+    if (params.industry && params.industry !== "All") {
+      filteredOrgs = filteredOrgs.filter(
+        (org) => org.industry === params.industry
+      );
+    }
+
+    if (params.location && params.location !== "All") {
+      filteredOrgs = filteredOrgs.filter((org) =>
+        org.location.toLowerCase().includes(params.location!.toLowerCase())
+      );
+    }
+
+    if (params.assignedTo && params.assignedTo !== "All") {
+      filteredOrgs = filteredOrgs.filter(
+        (org) => org.admin.name === params.assignedTo
+      );
+    }
+
+    const totalOrganizations = filteredOrgs.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedOrgs = filteredOrgs.slice(
+      startIndex,
+      startIndex + params.pageSize
     );
-    return organizations;
+
+    return {
+      organizations: paginatedOrgs,
+      currentPage: params.currentPage,
+      totalOrganizations,
+    };
   }
 
   async getBuildings(params: {
@@ -156,6 +210,167 @@ class ApiService {
 
     return {
       data: paginatedData,
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+  async getEpds(params: EpdLibrarySearch & { pageSize: number, currentPage: number }): Promise<{
+    data: EPD[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_EPDS];
+
+    if (params.searchValue) {
+      filteredData = filteredData.filter((d) =>
+        d.name.toLowerCase().includes(params.searchValue!.toLowerCase()) ||
+        d.category.toLowerCase().includes(params.searchValue!.toLowerCase()) ||
+        d.childCategory.toLowerCase().includes(params.searchValue!.toLowerCase())
+      );
+    }
+
+    if (params.country && params.country !== "all") {
+      filteredData = filteredData.filter((d) =>
+        d.country.toLowerCase() === params.country!.toLowerCase()
+      );
+    }
+
+    if (params.category && params.category !== "all") {
+      filteredData = filteredData.filter((d) =>
+        d.category.toLowerCase() === params.category!.toLowerCase()
+      );
+    }
+
+    if (params.subCategory && params.subCategory !== "all") {
+      filteredData = filteredData.filter((d) =>
+        d.subCategory.toLowerCase() === params.subCategory!.toLowerCase()
+      );
+    }
+
+    if (params.childCategory && params.childCategory !== "all") {
+      filteredData = filteredData.filter((d) =>
+        d.childCategory.toLowerCase() === params.childCategory!.toLowerCase()
+      );
+    }
+
+    if (params.epdType && params.epdType !== "all") {
+      filteredData = filteredData.filter((d) =>
+        d.epdType.toLowerCase() === params.epdType!.toLowerCase()
+      );
+    }
+
+    // Sorting logic (placeholder)
+    if (params.sortBy) {
+      // implementation if needed
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData,
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+  async getCountrySettings(params: {
+    search?: string;
+    currentPage: number;
+    pageSize: number;
+  }): Promise<{
+    data: CountrySetting[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_COUNTRY_SETTINGS];
+
+    if (params.search) {
+      filteredData = filteredData.filter((d) =>
+        d.name.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData,
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+  async getClimateTypes(params: {
+    search?: string;
+    currentPage: number;
+    pageSize: number;
+  }): Promise<{
+    data: ClimateType[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_CLIMATE_TYPES];
+
+    if (params.search) {
+      filteredData = filteredData.filter((d) =>
+        d.type.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData as ClimateType[],
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+  async getBuildingTypes(params: {
+    search?: string;
+    currentPage: number;
+    pageSize: number;
+  }): Promise<{
+    data: BuildingType[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_SYSTEM_BUILDINGS];
+
+    if (params.search) {
+      filteredData = filteredData.filter((d) =>
+        d.type.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData as BuildingType[],
       currentPage: params.currentPage,
       totalItems,
     };

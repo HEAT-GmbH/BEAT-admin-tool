@@ -1,5 +1,5 @@
 // Auto-generated file - do not edit manually
-// Generated on: 2026-02-18T04:02:02.074Z
+// Generated on: 2026-03-01T20:24:23.037Z
 
 export type IconName =
   | 'add-large-fill'
@@ -51,6 +51,7 @@ export type IconName =
   | 'fire-line'
   | 'flashlight-line'
   | 'folder-open'
+  | 'forbid-fill'
   | 'gas-station-line'
   | 'global-line'
   | 'home-smile-2-line'
@@ -69,9 +70,11 @@ export type IconName =
   | 'mail-line'
   | 'map-pin'
   | 'menu-search-line'
+  | 'more-2-line'
   | 'oil-line'
   | 'pushpin-fill'
   | 'question-line'
+  | 'rainy-line'
   | 'road-map-line'
   | 'save-line'
   | 'search-2-line'

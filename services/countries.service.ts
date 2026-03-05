@@ -74,7 +74,7 @@ class CountriesService {
     countryCode: string,
     stateName: string
   ): Promise<{ name: string }[]> {
-    if (!countryCode || !stateName) return [];
+    if (!countryCode) return [];
     try {
       const country = this.COUNTRIES_MAP.get(countryCode.toLowerCase());
       if (!country) return [];

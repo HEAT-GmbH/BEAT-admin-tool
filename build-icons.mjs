@@ -4,15 +4,15 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const excludedFromCurrentColor = ["google", "file-csv", "file-xls", "file-xlsx"];
+const excludedFromCurrentColor = ["file-csv", "file-xls", "file-xlsx"];
 
 // Configuration
 const config = {
-  iconsDir: path.join(__dirname, "./src/assets/icons"),
-  outputFile: path.join(__dirname, "./src/constants/icons-registry.js"),
+  iconsDir: path.join(__dirname, "./public/icons"),
+  outputFile: path.join(__dirname, "./constants/icons-registry.js"),
   // Optional: Generate TypeScript definitions
-  // generateTypes: true,
-  // typesFile: path.join(__dirname, "../src/types/icons.d.ts"),
+  generateTypes: true,
+  typesFile: path.join(__dirname, "./models/icons.d.ts"),
 };
 
 /**
@@ -54,20 +54,21 @@ function getIconName(filename) {
 /**
  * Generate TypeScript type definitions
  */
-// function generateTypeDefinitions(iconNames) {
-//   const iconNamesString = iconNames.map((name) => `  | '${name}'`).join("\n");
+function generateTypeDefinitions(iconNames) {
+  const iconNamesString = iconNames.map((name) => `  | '${name}'`).join("\n");
 
-//   return `// Auto-generated file - do not edit manually
-// // Generated on: ${new Date().toISOString()}
+  return `// Auto-generated file - do not edit manually
+// Generated on: ${new Date().toISOString()}
 
-// export type IconName =
-// ${iconNamesString};
-// export interface IconProps {
-//   size?: number;
-//   color?: string;
-//   className?: string;
-// }
+export type IconName =
+${iconNamesString};
 
+export interface IconProps {
+  size?: number;
+  color?: string;
+  className?: string;
+}
+`;
 // export interface IconComponent {
 //   create(iconName: IconName, options?: IconProps): SVGElement;
 //   render(iconName: IconName, container: HTMLElement, options?: IconProps): SVGElement;
@@ -81,8 +82,7 @@ function getIconName(filename) {
 //     renderIcon: (name: IconName, container: HTMLElement, options?: IconProps) => SVGElement;
 //   }
 // }
-// `;
-// }
+}
 
 /**
  * Main build function
@@ -146,17 +146,17 @@ async function buildIcons() {
     console.log(`📝 Generated: ${config.outputFile}`);
 
     // Generate TypeScript definitions if enabled
-    // if (config.generateTypes && iconNames.length > 0) {
-    //   const typesOutput = generateTypeDefinitions(iconNames);
-    //   const typesDir = path.dirname(config.typesFile);
+    if (config.generateTypes && iconNames.length > 0) {
+      const typesOutput = generateTypeDefinitions(iconNames);
+      const typesDir = path.dirname(config.typesFile);
 
-    //   if (!fs.existsSync(typesDir)) {
-    //     fs.mkdirSync(typesDir, { recursive: true });
-    //   }
+      if (!fs.existsSync(typesDir)) {
+        fs.mkdirSync(typesDir, { recursive: true });
+      }
 
-    //   fs.writeFileSync(config.typesFile, typesOutput);
-    //   console.log(`📝 Generated: ${config.typesFile}`);
-    // }
+      fs.writeFileSync(config.typesFile, typesOutput);
+      console.log(`📝 Generated: ${config.typesFile}`);
+    }
 
     // Summary
     console.log(`\n🎉 Build complete!`);
@@ -202,8 +202,8 @@ ${iconEntries}
 // Export icon names for validation
 export const ICON_NAMES = [
 ${Object.keys(iconsRegistry)
-      .map((name) => `  '${name}'`)
-      .join(",\n")}
+  .map((name) => `  '${name}'`)
+  .join(",\n")}
 ];
 
 export const EXCLUDED_FROM_CURRENT_COLOR = [

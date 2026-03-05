@@ -88,7 +88,13 @@ function FormInput<T extends FieldValues>({
               {labelAddon}
             </div>
           ) : null}
-          <InputGroup className={cn("h-10 overflow-hidden", className)}>
+          <InputGroup
+            className={cn(
+              "h-10 overflow-hidden",
+              type === "textarea" && "h-auto min-h-20",
+              className,
+            )}
+          >
             {startIcon || startAddon ? (
               <InputGroupAddon
                 className={cn("text-(--icon--soft-400)", iconClassName)}

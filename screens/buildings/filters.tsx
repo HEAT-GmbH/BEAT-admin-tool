@@ -29,7 +29,7 @@ export const Filters = () => {
 
   return (
     <div className="flex flex-wrap items-center gap-4">
-      <div className="relative flex-1 max-w-[31.125rem]">
+      <div className="relative flex-1 max-w-124.5">
         <InputWithIcon
           startIcon="search-2-line"
           placeholder="Search..."
@@ -46,7 +46,7 @@ export const Filters = () => {
             setStatus(val === "All" ? null : (val as any))
           }
         >
-          <SelectTrigger className="w-[7.1875rem] h-9!">
+          <SelectTrigger className="w-28.75 h-9!">
             <span className="mr-1">Status:</span>
             <SelectValue placeholder="All" />
           </SelectTrigger>
@@ -75,14 +75,14 @@ export const Filters = () => {
           onValueChange={(value) => setLocation(value || "All")}
           placeholder="Locations: All"
           searchPlaceholder="Search..."
-          className="w-[8.5625rem] h-9"
+          className="w-38 h-9"
         />
 
         <Select
           value={buildingType || "All"}
           onValueChange={(val) => setBuildingType(val || "All")}
         >
-          <SelectTrigger className="w-[9.9375rem] h-9!">
+          <SelectTrigger className="w-39.75 h-9!">
             <span className="mr-1">Building type:</span>
             <SelectValue placeholder="All" />
           </SelectTrigger>
@@ -101,7 +101,7 @@ export const Filters = () => {
           value={assignedTo || "All"}
           onValueChange={(val) => setAssignedTo(val || "All")}
         >
-          <SelectTrigger className="w-[9.4375rem] h-9!">
+          <SelectTrigger className="w-37.75 h-9!">
             <span className="mr-1">Assigned to:</span>
             <SelectValue placeholder="All" />
           </SelectTrigger>

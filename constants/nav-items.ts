@@ -1,6 +1,6 @@
 import { IconName } from "@/models/icons";
 
-export const sidebarItems: { label: string; href: string; icon: IconName; breadcrumbIcon?: IconName }[] = [
+export const sidebarItems: { label: string; href: string; icon: IconName; breadcrumbIcon?: IconName; innerSidebar?: {label: string; href: string; icon: IconName}[] }[] = [
   {
     label: "Dashboard",
     href: "#",
@@ -29,8 +29,9 @@ export const sidebarItems: { label: string; href: string; icon: IconName; breadc
   },
   {
     label: "Organizations",
-    href: "#",
+    href: "/organizations",
     icon: "building-4-fill",
+    breadcrumbIcon: "building-3-line"
   },
   {
     label: "User Management",
@@ -44,7 +45,13 @@ export const sidebarItems: { label: string; href: string; icon: IconName; breadc
   },
   {
     label: "System Settings",
-    href: "#",
+    href: "/system-settings",
     icon: "settings-2-fill",
+    breadcrumbIcon: "settings-5-line",
+    innerSidebar: [
+      { label: "Countries and Cities", href: "/system-settings/countries", icon: "global-line" },
+      { label: "Climate types", href: "/system-settings/climate", icon: "rainy-line" },
+      { label: "Building types", href: "/system-settings/building", icon: "building-line" },
+    ]
   },
 ];

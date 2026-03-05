@@ -17,7 +17,9 @@ const AppSidebar = () => {
         {sidebarItems.map((item) => (
           <Link
             key={item.label}
-            href={item.href}
+            href={
+              item.innerSidebar?.length ? item.innerSidebar[0].href : item.href
+            }
             className={cn(
               "flex items-center gap-2 py-1.5 px-1 rounded-[0.5rem] paragraph-small text-(--text--sub-600) hover:bg-white/80 transition-colors duration-500",
               isActive(item.href) && "bg-white text-(--text-strong-950)",
