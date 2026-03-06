@@ -14,8 +14,18 @@ export const sidebarItems: { label: string; href: string; icon: IconName; breadc
   },
   {
     label: "Emission Config",
-    href: "#",
+    href: "/emission-config",
     icon: "leaf-fill",
+    breadcrumbIcon: "building-3-line",
+    innerSidebar: [
+      { label: "Grid Emission Factors", href: "/emission-config/grid-emission-factors", icon: "outlet-2-line" },
+      { label: "Fuel Emission Factors", href: "/emission-config/fuel-emission-factors", icon: "gas-station-line" },
+      { label: "Cooling Systems", href: "/emission-config/cooling-systems", icon: "snowflake-line" },
+      { label: "Ventilation Systems", href: "/emission-config/ventilation-systems", icon: "windy-fill" },
+      { label: "Lighting Systems", href: "/emission-config/lighting-systems", icon: "lightbulb-flash-line" },
+      { label: "Lift & Escalator Systems", href: "/emission-config/lift-escalator-systems", icon: "arrow-up-down-fill" },
+      { label: "Hot Water Systems", href: "/emission-config/hot-water-systems", icon: "temp-hot-line" },
+    ]
   },
   {
     label: "Reports",

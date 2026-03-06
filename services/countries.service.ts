@@ -20,6 +20,10 @@ class CountriesService {
     this.fetchCountries();
   }
 
+  hasCountries(): boolean {
+    return this.COUNTRIES_MAP.size > 0;
+  }
+
   getCountries(): { name: string; code: string; flag: string }[] {
     if (!this.COUNTRIES_MAP.size) this.fetchCountries();
 
