@@ -2,19 +2,20 @@
 
 import { useAuth } from "@/contexts/auth.context";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { user } = useAuth();
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
-  if (user) {
-    router.push("/buildings");
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoading && user) {
+      router.push("/buildings");
+    }
+  }, [user, isLoading, router]);
+
+  if (isLoading) return null;
+  if (user) return null;
 
   return <>{children}</>;
 }

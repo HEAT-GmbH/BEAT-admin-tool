@@ -1,5 +1,6 @@
 import { OrganizationsScreen } from "@/screens/organizations";
+import { Suspense } from "react";
 
 export default function OrganizationsPage() {
-  return <OrganizationsScreen />;
+  return <Suspense><OrganizationsScreen /></Suspense>;
 }

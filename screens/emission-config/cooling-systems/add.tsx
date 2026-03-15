@@ -62,7 +62,7 @@ export const AddCoolingSystemDialog = ({
   open,
   onOpenChange,
 }: AddCoolingSystemDialogProps) => {
-  const { reset, handleSubmit, control, setValue, ...methods } = useForm({
+  const { reset, handleSubmit, control, setValue, ...methods } = useForm<AddCoolingSystemData>({
     resolver: zodResolver(schema),
   });
   const {

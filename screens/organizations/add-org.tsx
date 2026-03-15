@@ -17,7 +17,7 @@ export const AddOrg = () => {
       <AddOrgDialog
         onOpenChange={setOpen}
         onSuccess={() => {
-          console.log("Organization added successfully");
+          setOpen(false);
         }}
       />
     </Dialog>

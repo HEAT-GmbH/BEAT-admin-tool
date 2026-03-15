@@ -1,5 +1,6 @@
 import { SSCountriesScreen } from "@/screens/system-settings/countries";
+import { Suspense } from "react";
 
 export default function SSCountriesPage() {
-  return <SSCountriesScreen />;
+  return <Suspense><SSCountriesScreen /></Suspense>;
 }

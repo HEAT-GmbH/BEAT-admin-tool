@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SSDialog } from "@/screens/components/dialog";
+import { useBuildingTypesContext } from "@/screens/system-settings/building/context";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import {
@@ -44,13 +45,14 @@ export const AddBuildingDialog = ({
   open,
   onOpenChange,
 }: AddBuildingDialogProps) => {
+  const { createBuildingType, isMutating } = useBuildingTypesContext();
   const {
     reset,
     handleSubmit,
     control,
     formState: { errors, ...formState },
     ...methods
-  } = useForm({
+  } = useForm<AddBuildingData>({
     resolver: zodResolver(schema),
   });
   const { fields, append, remove } = useFieldArray({
@@ -82,8 +84,12 @@ export const AddBuildingDialog = ({
     remove(index);
   };
 
-  const onSubmit = (data: AddBuildingData) => {
-    console.log("Submit building type:", data);
+  const onSubmit = async (data: AddBuildingData) => {
+    await createBuildingType({
+      name: data.type,
+      has_subtypes: data.hasSubTypes,
+      subtypes: data.hasSubTypes ? data.subTypes.map((s) => ({ name: s.type })) : [],
+    });
     onOpenChange(false);
     reset();
   };
@@ -95,6 +101,7 @@ export const AddBuildingDialog = ({
       title="Add building type"
       description="Add building categories and sub-types"
       onSubmit={handleSubmit(onSubmit)}
+      isLoading={isMutating}
     >
       <FormProvider
         handleSubmit={handleSubmit}

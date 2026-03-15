@@ -1,13 +1,14 @@
 export interface BuildingType {
   id: string;
-  type: string;
-  hasSubTypes: boolean;
-  subTypes: BuildingSubType[];
-  status: string;
+  name: string;
+  has_subtypes: boolean;
+  subtype_count: number;
+  status: "active" | "inactive";
+  subtypes: BuildingSubType[];
 }
 
 export interface BuildingSubType {
   id: string;
-  type: string;
-  isActive: boolean;
+  name: string;
+  is_active: boolean;
 }

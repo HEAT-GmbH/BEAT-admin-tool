@@ -13,6 +13,7 @@ interface Props {
   description: string;
   onSubmit: () => void;
   nextLabel?: string;
+  isLoading?: boolean;
 }
 
 export const SSDialog = ({
@@ -23,6 +24,7 @@ export const SSDialog = ({
   description,
   onSubmit,
   nextLabel = "Done",
+  isLoading = false,
 }: PropsWithChildren<Props>) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +45,7 @@ export const SSDialog = ({
           >
             Cancel
           </Button>
-          <Button onClick={onSubmit} className="h-10 px-4">
+          <Button onClick={onSubmit} disabled={isLoading} className="h-10 px-4">
             {nextLabel}
             <Icon name="arrow-right-s-line" size={20} />
           </Button>
