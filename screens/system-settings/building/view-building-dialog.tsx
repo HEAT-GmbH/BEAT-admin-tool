@@ -10,8 +10,11 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BuildingType } from "@/models/building-type";
 import { SSDialog } from "@/screens/components/dialog";
+import { useBuildingTypesContext } from "@/screens/system-settings/building/context";
+import { apiService } from "@/services/api.service";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import {
   FormProvider,
   useController,
@@ -47,6 +50,14 @@ export const ViewBuildingDialog = ({
   onOpenChange,
   item,
 }: ViewBuildingDialogProps) => {
+  const { updateBuildingType, isMutating } = useBuildingTypesContext();
+
+  const { data: detail } = useQuery({
+    queryKey: ["building-type-detail", item?.id],
+    queryFn: () => apiService.getBuildingTypeDetail(item!.id),
+    enabled: open && !!item,
+  });
+
   const {
     reset,
     handleSubmit,
@@ -72,6 +83,20 @@ export const ViewBuildingDialog = ({
   });
   const [subTypeInput, setSubTypeInput] = useState("");
 
+  const sync = useEffectEvent(() => {
+    if (detail) {
+      reset({
+        type: detail.name,
+        hasSubTypes: detail.has_subtypes,
+        subTypes: (detail.subtypes ?? []).map((s) => ({ type: s.name, isActive: s.is_active })),
+      });
+    } else if (!item) {
+      reset();
+    }
+  });
+
+  useEffect(() => { sync(); }, [detail, item]);
+
   const handleAddSubType = () => {
     if (!subTypeInput.trim()) return;
     const trimmed = subTypeInput.trim();
@@ -85,8 +110,13 @@ export const ViewBuildingDialog = ({
     remove(index);
   };
 
-  const onSubmit = (data: ViewBuildingData) => {
-    console.log("Submit building type:", data);
+  const onSubmit = async (data: ViewBuildingData) => {
+    if (!item) return;
+    await updateBuildingType(item.id, {
+      name: data.type,
+      has_subtypes: data.hasSubTypes,
+      subtypes: data.hasSubTypes ? data.subTypes.map((s) => ({ name: s.type })) : [],
+    });
     onOpenChange(false);
     reset();
   };
@@ -98,6 +128,7 @@ export const ViewBuildingDialog = ({
       title="Add building type"
       description="Add building categories and sub-types"
       onSubmit={handleSubmit(onSubmit)}
+      isLoading={isMutating}
     >
       <FormProvider
         handleSubmit={handleSubmit}

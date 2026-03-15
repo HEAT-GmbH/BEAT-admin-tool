@@ -5,17 +5,15 @@ import { delay } from "@/lib/helpers";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
 import { Organization } from "@/models/organization";
+import { UserListItem } from "@/models/user";
 import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
 import { OperationalDataEntry, Material } from "@/screens/add-building/schema";
 import { EPD } from "@/models/epd";
 import { DUMMY_EPDS } from "@/constants/dummy-epds";
 import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
-import { DUMMY_COUNTRY_SETTINGS } from "@/constants/dummy-country-settings";
 import { CountrySetting } from "@/models/country-setting";
 import { ClimateType } from "@/models/climate-type";
-import { DUMMY_CLIMATE_TYPES } from "@/constants/dummy-client-types";
 import { BuildingType } from "@/models/building-type";
-import { DUMMY_SYSTEM_BUILDINGS } from "@/constants/dummy-system-buildings";
 import { GridEmissionFactor } from "@/models/grid-emission-factor";
 import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
 import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
@@ -37,29 +35,56 @@ type BasePaginatedTable = {
   pageSize: number;
 }
 
-class ApiService {
-  user: User | null = null;
+type DjangoPaginated<T> = {
+  results: T[];
+  pagination: { total: number; page: number; page_size: number; total_pages: number };
+};
 
-  async login(email: string, password: string) {
-    await delay(1000);
-    console.log(email, password);
-    this.user = {
-      email,
-      id: "1",
-      firstName: "Joseph",
-      lastName: "J.",
-      middleName: "",
-    };
+type PaginatedResult<T> = { data: T[]; currentPage: number; totalItems: number };
+
+function toQuery(params: BasePaginatedTable) {
+  return new URLSearchParams({
+    page: String(params.currentPage),
+    page_size: String(params.pageSize),
+    ...(params.search ? { search: params.search } : {}),
+  });
+}
+
+function toPageResult<T>(res: DjangoPaginated<T>): PaginatedResult<T> {
+  return {
+    data: res.results,
+    currentPage: res.pagination.page,
+    totalItems: res.pagination.total,
+  };
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...init });
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`;
+    try { const d = await res.json(); message = d.detail ?? d.message ?? message; } catch { /* ignore */ }
+    throw new Error(message);
+  }
+  return res.status === 204 ? (undefined as T) : res.json();
+}
+
+class ApiService {
+  async login(email: string, password: string): Promise<void> {
+    await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
   }
 
-  async logout() {
-    await delay(1000);
-    this.user = null;
+  async logout(): Promise<void> {
+    await apiFetch("/api/auth/logout", { method: "POST" });
   }
 
   async me(): Promise<User | null> {
-    await delay(1000);
-    return this.user;
+    try {
+      const data = await apiFetch<{ user: { id: string; email: string; username: string; first_name: string; last_name: string } }>("/api/auth/profile");
+      const u = data.user;
+      return { id: String(u.id), email: u.email, username: u.username, firstName: u.first_name, middleName: null, lastName: u.last_name };
+    } catch {
+      return null;
+    }
   }
 
   async getOrganizations(params: {
@@ -300,88 +325,47 @@ class ApiService {
     };
   }
 
-  async getCountrySettings(params: BasePaginatedTable): Promise<{
-    data: CountrySetting[];
-    currentPage: number;
-    totalItems: number;
-  } | null> {
-    await delay(1000);
-    let filteredData = [...DUMMY_COUNTRY_SETTINGS];
-
-    if (params.search) {
-      filteredData = filteredData.filter((d) =>
-        d.name.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-
-    const totalItems = filteredData.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedData = filteredData.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
-
-    return {
-      data: paginatedData,
-      currentPage: params.currentPage,
-      totalItems,
-    };
+  async getClimateTypeDetail(id: string): Promise<ClimateType> {
+    return apiFetch(`/api/system-settings/climate-types/${id}`);
   }
 
-  async getClimateTypes(params: BasePaginatedTable): Promise<{
-    data: ClimateType[];
-    currentPage: number;
-    totalItems: number;
-  } | null> {
-    await delay(1000);
-    let filteredData = [...DUMMY_CLIMATE_TYPES];
-
-    if (params.search) {
-      filteredData = filteredData.filter((d) =>
-        d.type.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-
-    const totalItems = filteredData.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedData = filteredData.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
-
-    return {
-      data: paginatedData as ClimateType[],
-      currentPage: params.currentPage,
-      totalItems,
-    };
+  async getCountryDetail(id: string): Promise<CountrySetting> {
+    return apiFetch(`/api/system-settings/countries/${id}`);
   }
 
-  async getBuildingTypes(params: BasePaginatedTable): Promise<{
-    data: BuildingType[];
-    currentPage: number;
-    totalItems: number;
-  } | null> {
-    await delay(1000);
-    let filteredData = [...DUMMY_SYSTEM_BUILDINGS];
+  async getBuildingTypeDetail(id: string): Promise<BuildingType> {
+    return apiFetch(`/api/system-settings/building-types/${id}`);
+  }
 
-    if (params.search) {
-      filteredData = filteredData.filter((d) =>
-        d.type.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
+  async getCountrySettings(params: BasePaginatedTable): Promise<PaginatedResult<CountrySetting> | null> {
+    const q = toQuery(params);
+    return toPageResult(await apiFetch<DjangoPaginated<CountrySetting>>(`/api/system-settings/countries?${q}`));
+  }
 
-    const totalItems = filteredData.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedData = filteredData.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
+  async getClimateTypes(params: BasePaginatedTable): Promise<PaginatedResult<ClimateType> | null> {
+    const q = toQuery(params);
+    return toPageResult(await apiFetch<DjangoPaginated<ClimateType>>(`/api/system-settings/climate-types?${q}`));
+  }
 
-    return {
-      data: paginatedData as BuildingType[],
-      currentPage: params.currentPage,
-      totalItems,
-    };
+  async getBuildingTypes(params: BasePaginatedTable): Promise<PaginatedResult<BuildingType> | null> {
+    const q = toQuery(params);
+    return toPageResult(await apiFetch<DjangoPaginated<BuildingType>>(`/api/system-settings/building-types?${q}`));
+  }
+
+  async createClimateType(data: { name: string; description: string }): Promise<ClimateType> {
+    return apiFetch("/api/system-settings/climate-types", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateClimateType(id: string, data: { name: string; description: string; status: string }): Promise<ClimateType> {
+    return apiFetch(`/api/system-settings/climate-types/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async createBuildingType(data: { name: string; has_subtypes: boolean; subtypes: { name: string }[] }): Promise<BuildingType> {
+    return apiFetch("/api/system-settings/building-types", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateBuildingType(id: string, data: { name: string; has_subtypes: boolean; subtypes: { name: string }[] }): Promise<BuildingType> {
+    return apiFetch(`/api/system-settings/building-types/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   }
 
   async getGridEmissionFactors(params: BasePaginatedTable): Promise<{
@@ -536,6 +520,111 @@ class ApiService {
       currentPage: params.currentPage,
       totalItems,
     };
+  }
+
+  // ── Organisations (real API) ──────────────────────────────────────────────
+
+  async getOrganisations(params: {
+    search?: string;
+    industry?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<PaginatedResult<Organization> | null> {
+    const q = new URLSearchParams();
+    if (params.search) q.set("search", params.search);
+    if (params.industry) q.set("industry", params.industry);
+    if (params.page) q.set("page", String(params.page));
+    if (params.pageSize) q.set("page_size", String(params.pageSize));
+    return toPageResult(
+      await apiFetch<DjangoPaginated<Organization>>(`/api/organisations?${q}`)
+    );
+  }
+
+  async getOrganisationDetail(id: string): Promise<Organization> {
+    return apiFetch(`/api/organisations/${id}`);
+  }
+
+  async createOrganisation(data: {
+    name: string;
+    industry: string;
+    country_id?: string;
+    city_id?: string;
+    invite_users?: { email: string; role: string }[];
+  }): Promise<Organization> {
+    return apiFetch("/api/organisations", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateOrganisation(
+    id: string,
+    data: Partial<{
+      name: string;
+      industry: string;
+      country_id: string;
+      city_id: string;
+      status: string;
+    }>
+  ): Promise<Organization> {
+    return apiFetch(`/api/organisations/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ── Users (real API) ──────────────────────────────────────────────────────
+
+  async getUsers(params: {
+    search?: string;
+    role?: string;
+    organisation?: string;
+    page?: number;
+    pageSize?: number;
+  }): Promise<PaginatedResult<UserListItem> | null> {
+    const q = new URLSearchParams();
+    if (params.search) q.set("search", params.search);
+    if (params.role) q.set("role", params.role);
+    if (params.organisation) q.set("organisation", params.organisation);
+    if (params.page) q.set("page", String(params.page));
+    if (params.pageSize) q.set("page_size", String(params.pageSize));
+    return toPageResult(
+      await apiFetch<DjangoPaginated<UserListItem>>(`/api/users?${q}`)
+    );
+  }
+
+  async getUserDetail(id: string): Promise<UserListItem> {
+    return apiFetch(`/api/users/${id}`);
+  }
+
+  async createUser(data: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: string;
+    organisation_id?: string;
+  }): Promise<UserListItem> {
+    return apiFetch("/api/users", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateUser(
+    id: string,
+    data: Partial<{
+      first_name: string;
+      last_name: string;
+      email: string;
+      role: string;
+      organisation_id: string;
+      is_active: boolean;
+    }>
+  ): Promise<UserListItem> {
+    return apiFetch(`/api/users/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
   }
 }
 
