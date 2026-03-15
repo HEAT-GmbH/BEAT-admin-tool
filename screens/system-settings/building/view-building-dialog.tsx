@@ -64,7 +64,7 @@ export const ViewBuildingDialog = ({
     control,
     formState: { errors, ...formState },
     ...methods
-  } = useForm({
+  } = useForm<ViewBuildingData>({
     resolver: zodResolver(schema),
   });
   const { fields, append, remove } = useFieldArray({

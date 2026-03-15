@@ -1,5 +1,6 @@
 import { LightingSystemsScreen } from "@/screens/emission-config/lighting-systems";
+import { Suspense } from "react";
 
 export default function LightingSystemsPage() {
-  return <LightingSystemsScreen />;
+  return <Suspense><LightingSystemsScreen /></Suspense>;
 }

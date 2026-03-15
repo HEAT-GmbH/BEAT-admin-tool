@@ -52,7 +52,7 @@ export const AddBuildingDialog = ({
     control,
     formState: { errors, ...formState },
     ...methods
-  } = useForm({
+  } = useForm<AddBuildingData>({
     resolver: zodResolver(schema),
   });
   const { fields, append, remove } = useFieldArray({

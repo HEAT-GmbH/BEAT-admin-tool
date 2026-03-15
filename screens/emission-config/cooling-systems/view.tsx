@@ -70,7 +70,7 @@ export const ViewCoolingSystemDialog = ({
   const [openAddRefrigerantDialog, setOpenAddRefrigerantDialog] =
     useState(false);
 
-  const { reset, handleSubmit, control, setValue } = useForm({
+  const { reset, handleSubmit, control, setValue } = useForm<ViewCoolingSystemData>({
     resolver: zodResolver(schema),
   });
   const {
@@ -253,7 +253,7 @@ function AddSubTypeDialog({ open, onOpenChange, onSubmit }: AddSubTypeProps) {
     setValue,
     getValues,
     formState: { errors },
-  } = useForm({
+  } = useForm<z.infer<typeof addsubType>>({
     resolver: zodResolver(addsubType),
   });
 
@@ -333,7 +333,7 @@ function AddRefrigerantDialog({
     setValue,
     getValues,
     formState: { errors },
-  } = useForm({
+  } = useForm<z.infer<typeof addRefrigerant>>({
     resolver: zodResolver(addRefrigerant),
   });
 

@@ -9,8 +9,8 @@ import { createContext, useContext } from "react";
 import { toast } from "sonner";
 
 interface ClimateTypesContextType extends PaginationTableContextType<ClimateType> {
-  createClimateType: (data: { name: string; description: string }) => Promise<void>;
-  updateClimateType: (id: string, data: { name: string; description: string; status: string }) => Promise<void>;
+  createClimateType: (data: { name: string; description: string }) => Promise<ClimateType>;
+  updateClimateType: (id: string, data: { name: string; description: string; status: string }) => Promise<ClimateType>;
   isMutating: boolean;
 }
 

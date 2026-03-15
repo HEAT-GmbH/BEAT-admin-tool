@@ -11,8 +11,8 @@ import { toast } from "sonner";
 type BuildingTypePayload = { name: string; has_subtypes: boolean; subtypes: { name: string }[] };
 
 interface BuildingTypesContextType extends PaginationTableContextType<BuildingType> {
-  createBuildingType: (data: BuildingTypePayload) => Promise<void>;
-  updateBuildingType: (id: string, data: BuildingTypePayload) => Promise<void>;
+  createBuildingType: (data: BuildingTypePayload) => Promise<BuildingType>;
+  updateBuildingType: (id: string, data: BuildingTypePayload) => Promise<BuildingType>;
   isMutating: boolean;
 }
 

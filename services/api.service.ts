@@ -1,6 +1,5 @@
 import { DUMMY_BUILDINGS } from "@/constants/dummy-buildings";
 import { DUMMY_ENERGY_CARRIERS } from "@/constants/dummy-energy-carriers";
-import { DUMMY_ORGANIZATIONS } from "@/constants/dummy-organizations";
 import { delay } from "@/lib/helpers";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
@@ -85,59 +84,6 @@ class ApiService {
     } catch {
       return null;
     }
-  }
-
-  async getOrganizations(params: {
-    search?: string;
-    industry?: string;
-    location?: string;
-    assignedTo?: string;
-    currentPage: number;
-    pageSize: number;
-  }): Promise<{
-    organizations: Organization[];
-    currentPage: number;
-    totalOrganizations: number;
-  } | null> {
-    await delay(1000);
-    let filteredOrgs = [...DUMMY_ORGANIZATIONS];
-
-    if (params.search) {
-      filteredOrgs = filteredOrgs.filter((org) =>
-        org.name.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-
-    if (params.industry && params.industry !== "All") {
-      filteredOrgs = filteredOrgs.filter(
-        (org) => org.industry === params.industry
-      );
-    }
-
-    if (params.location && params.location !== "All") {
-      filteredOrgs = filteredOrgs.filter((org) =>
-        org.location.toLowerCase().includes(params.location!.toLowerCase())
-      );
-    }
-
-    if (params.assignedTo && params.assignedTo !== "All") {
-      filteredOrgs = filteredOrgs.filter(
-        (org) => org.admin.name === params.assignedTo
-      );
-    }
-
-    const totalOrganizations = filteredOrgs.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedOrgs = filteredOrgs.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
-
-    return {
-      organizations: paginatedOrgs,
-      currentPage: params.currentPage,
-      totalOrganizations,
-    };
   }
 
   async getBuildings(params: {

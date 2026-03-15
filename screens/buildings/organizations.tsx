@@ -18,7 +18,7 @@ export const Organizations = ({ onOrganizationSelect }: Props) => {
   const debouncedSearchValue = useDebounce(searchValue);
   const { data, isFetching } = useQuery({
     queryKey: ["organizations", debouncedSearchValue],
-    queryFn: () => apiService.fetchOrganizations(debouncedSearchValue),
+    queryFn: () => apiService.getOrganisations({ search: debouncedSearchValue || undefined, page: 1, pageSize: 100 }),
     placeholderData: keepPreviousData,
   });
 
@@ -41,7 +41,7 @@ export const Organizations = ({ onOrganizationSelect }: Props) => {
           className="grid grid-cols-1 gap-2"
           onValueChange={onOrganizationSelect}
         >
-          {data.map((organization) => (
+          {data.data.map((organization) => (
             <FieldLabel
               key={organization.id}
               htmlFor={organization.id}

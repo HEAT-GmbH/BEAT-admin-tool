@@ -32,7 +32,7 @@ export const Filters = () => {
       <div className="flex items-center gap-2">
         <Select
           value={industry || "All"}
-          onValueChange={(val) => setIndustry(val === "All" ? "" : val)}
+          onValueChange={(val) => setIndustry(val === "All" ? "" : (val ?? ""))}
         >
           <SelectTrigger className="w-[10.1875rem] h-9!">
             <span className="mr-1 text-(--text--sub-600)">Industry:</span>
@@ -56,7 +56,7 @@ export const Filters = () => {
             })),
           ]}
           value={location || "All"}
-          onValueChange={(val) => setLocation(val === "All" ? "" : val)}
+          onValueChange={(val) => setLocation(val === "All" ? "" : (val ?? ""))}
           placeholder="Locations: All"
           searchPlaceholder="Search..."
           className="w-[10.1875rem] h-9"

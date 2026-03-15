@@ -27,7 +27,7 @@ interface OrgContextType {
     name: string; industry: string;
     country_id?: string; city_id?: string;
     invite_users?: { email: string; role: string }[];
-  }) => Promise<void>;
+  }) => Promise<Organization>;
   isCreating: boolean;
 }
 

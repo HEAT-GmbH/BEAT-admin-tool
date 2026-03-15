@@ -103,7 +103,7 @@ export const EpdLibraryDialog = ({ isOpen, onOpenChange, onSubmit }: Props) => {
 
     // Let's use the catalog approach.
     const result = Object.entries(selections || {})
-      .filter(([_, qty]) => qty > 0)
+      .filter(([_, qty]) => (qty as number) > 0)
       .map(([id, qty]) => {
         // Find in local data first
         const found = data.find((d) => d.id === id);

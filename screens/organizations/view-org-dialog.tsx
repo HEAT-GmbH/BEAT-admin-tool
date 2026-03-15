@@ -102,7 +102,7 @@ export const ViewOrgDialog = ({ open, onOpenChange, orgId, mode }: Props) => {
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label>Industry</Label>
-                  <Select value={industry} onValueChange={setIndustry}>
+                  <Select value={industry} onValueChange={(v) => setIndustry(v ?? "")}>
                     <SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Construction">Construction</SelectItem>

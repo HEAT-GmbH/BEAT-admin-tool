@@ -110,8 +110,8 @@ const buildColumns = (
     id: "actions",
     cell: ({ row }) => (
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+        <DropdownMenuTrigger>
+          <Button variant="ghost" size="icon" className="h-8 w-8 p-0" type="button">
             <MoreVertical className="h-4 w-4 text-(--icon--sub-600)" />
           </Button>
         </DropdownMenuTrigger>
