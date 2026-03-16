@@ -202,16 +202,16 @@ export const schema = z.object({
       latitude: z.string().optional(),
     }),
     buildingDetails: z.object({
-      type: z.string().min(1),
-      areaClimateType: z.string().min(1),
+      buildingTypeId: z.string().min(1),
+      apartmentTypeId: z.string().optional(),
+      climateTypeId: z.string().min(1),
       assessmentPeriod: zodNumber,
       constructionYear: z.string().optional(),
       totalFloorArea: zodNumber,
       conditionedFloorArea: zodNumber.optional(),
-      roomCoolingTemperature: zodNumber.optional(),
       numberOfFloorsBelowGround: zodNumber.optional(),
-      energyConsumption: zodNumber,
-      energyMonitoringControlSystems: z.string().min(1),
+      hasCertification: z.string().min(1),
+      hasBOQ: z.string().min(1),
     }),
   }),
   operationalDetails: z.object({
@@ -219,7 +219,11 @@ export const schema = z.object({
       numberOfResidents: zodNumber,
       annualOperatingSchedule: hoursDaysWeeks,
       roomHeatingTemperature: zodNumber,
+      heatingTemperatureUnit: z.string().min(1),
       roomCoolingTemperature: zodNumber,
+      coolingTemperatureUnit: z.string().min(1),
+      renewableEnergyPercent: zodNumber.optional(),
+      buildingSmartSystem: z.string().min(1),
     }),
     coolingSystem: z.array(
       z.discriminatedUnion("type", [

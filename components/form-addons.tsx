@@ -19,13 +19,21 @@ export const FormEndSelect = ({
   options,
   placeholder,
   className,
+  value,
+  onChange,
 }: {
   options: { label: React.ReactNode; value: string }[];
   placeholder?: string;
   className?: string;
+  value?: string;
+  onChange?: (value: string | null) => void;
 }) => {
   return (
-    <Select defaultValue={options[0]?.value}>
+    <Select
+      value={value}
+      defaultValue={value ?? options[0]?.value}
+      onValueChange={onChange}
+    >
       <SelectTrigger
         className={cn("w-fit border-none h-full", className)}
         onClick={(e) => e.stopPropagation()}

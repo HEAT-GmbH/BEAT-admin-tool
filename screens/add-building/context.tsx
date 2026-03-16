@@ -245,13 +245,16 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             building_uuid: buildingUuid,
-            building_type_id: details.type,
-            climate_type: details.areaClimateType,
+            building_type_id: details.buildingTypeId,
+            apartment_type_id: details.apartmentTypeId ?? undefined,
+            climate_type: details.climateTypeId,
             assessment_period: details.assessmentPeriod,
             total_floor_area: details.totalFloorArea,
             conditioned_floor_area: details.conditionedFloorArea ?? undefined,
             construction_year: details.constructionYear ?? undefined,
             floors_below_ground: details.numberOfFloorsBelowGround ?? undefined,
+            has_certification: details.hasCertification === "yes",
+            has_boq: details.hasBOQ === "yes",
           }),
         });
 
@@ -285,7 +288,11 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
             workdays_per_week: sched.annualOperatingSchedule?.days,
             weeks_per_year: sched.annualOperatingSchedule?.weeks,
             heating_temp: sched.roomHeatingTemperature,
+            heating_temp_unit: sched.heatingTemperatureUnit,
             cooling_temp: sched.roomCoolingTemperature,
+            cooling_temp_unit: sched.coolingTemperatureUnit,
+            renewable_energy_percent: sched.renewableEnergyPercent ?? undefined,
+            building_smart_system: sched.buildingSmartSystem === "yes",
           }),
         });
       } catch (err) {
