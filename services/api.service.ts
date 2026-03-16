@@ -1,4 +1,3 @@
-import { DUMMY_BUILDINGS } from "@/constants/dummy-buildings";
 import { DUMMY_ENERGY_CARRIERS } from "@/constants/dummy-energy-carriers";
 import { delay } from "@/lib/helpers";
 import { User } from "@/models/auth";
@@ -88,10 +87,10 @@ class ApiService {
 
   async getBuildings(params: {
     search?: string;
-    status?: Building["status"] | null;
-    location?: string;
-    buildingType?: string;
-    assignedTo?: string;
+    draft?: boolean | null;
+    country?: string;
+    climateZone?: string;
+    organisation?: string;
     currentPage: number;
     pageSize: number;
   }): Promise<{
@@ -99,51 +98,58 @@ class ApiService {
     currentPage: number;
     totalBuildings: number;
   } | null> {
-    await delay(1000);
-    let filteredBuildings = [...DUMMY_BUILDINGS];
+    const q = new URLSearchParams();
+    q.set("page", String(params.currentPage));
+    q.set("page_size", String(params.pageSize));
+    if (params.search) q.set("search", params.search);
+    if (params.draft !== null && params.draft !== undefined)
+      q.set("draft", String(params.draft));
+    if (params.country && params.country !== "All")
+      q.set("country", params.country);
+    if (params.climateZone && params.climateZone !== "All")
+      q.set("climate_zone", params.climateZone);
+    if (params.organisation) q.set("organisation", params.organisation);
 
-    if (params.search) {
-      filteredBuildings = filteredBuildings.filter((b) =>
-        b.name.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-
-    if (params.status && params.status !== null) {
-      filteredBuildings = filteredBuildings.filter(
-        (b) => b.status === params.status
-      );
-    }
-
-    if (params.location && params.location !== "All") {
-      filteredBuildings = filteredBuildings.filter((b) =>
-        b.location.toLowerCase().includes(params.location!.toLowerCase())
-      );
-    }
-
-    if (params.buildingType && params.buildingType !== "All") {
-      filteredBuildings = filteredBuildings.filter(
-        (b) => b.building_type === params.buildingType
-      );
-    }
-
-    if (params.assignedTo && params.assignedTo !== "All") {
-      filteredBuildings = filteredBuildings.filter(
-        (b) => b.assigned_to.name === params.assignedTo
-      );
-    }
-
-    const totalBuildings = filteredBuildings.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedBuildings = filteredBuildings.slice(
-      startIndex,
-      startIndex + params.pageSize
+    const data = await apiFetch<DjangoPaginated<Building>>(
+      `/api/buildings?${q}`
     );
-
     return {
-      buildings: paginatedBuildings,
-      currentPage: params.currentPage,
-      totalBuildings,
+      buildings: data.results,
+      currentPage: data.pagination.page,
+      totalBuildings: data.pagination.total,
     };
+  }
+
+  async exportBuildings(params: {
+    search?: string;
+    draft?: string;
+    country?: string;
+    climateZone?: string;
+    organisation?: string;
+  }): Promise<void> {
+    const q = new URLSearchParams();
+    if (params.search) q.set("search", params.search);
+    if (params.draft) q.set("draft", params.draft);
+    if (params.country && params.country !== "All")
+      q.set("country", params.country);
+    if (params.climateZone && params.climateZone !== "All")
+      q.set("climate_zone", params.climateZone);
+    if (params.organisation) q.set("organisation", params.organisation);
+
+    const res = await fetch(`/api/buildings/export?${q}`);
+    if (!res.ok) throw new Error("Export failed");
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const match = disposition.match(/filename="?([^"]+)"?/);
+    a.download = match?.[1] ?? "buildings.xlsx";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   async getEnergyCarriers(params: OperationalDataEntrySearchSchema & {pageSize: number, currentPage: number}):Promise<{
@@ -277,6 +283,25 @@ class ApiService {
 
   async getCountryDetail(id: string): Promise<CountrySetting> {
     return apiFetch(`/api/system-settings/countries/${id}`);
+  }
+
+  async getCountryRegions(countryId: string | number, search?: string): Promise<{ id: number; name: string }[]> {
+    const q = new URLSearchParams();
+    if (search) q.set("search", search);
+    const data = await apiFetch<{ results: { id: number; name: string }[] }>(
+      `/api/system-settings/countries/${countryId}/regions/?${q}`
+    );
+    return data.results;
+  }
+
+  async getCountryCities(countryId: string | number, options?: { regionId?: string | number; search?: string }): Promise<{ id: number; name: string }[]> {
+    const q = new URLSearchParams();
+    if (options?.search) q.set("search", options.search);
+    if (options?.regionId) q.set("region_id", String(options.regionId));
+    const data = await apiFetch<{ results: { id: number; name: string }[] }>(
+      `/api/system-settings/countries/${countryId}/cities/?${q}`
+    );
+    return data.results;
   }
 
   async getBuildingTypeDetail(id: string): Promise<BuildingType> {
@@ -497,9 +522,16 @@ class ApiService {
     city_id?: string;
     invite_users?: { email: string; role: string }[];
   }): Promise<Organization> {
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      industry: data.industry,
+      ...(data.invite_users ? { invite_users: data.invite_users } : {}),
+    };
+    if (data.country_id) payload.country = Number(data.country_id);
+    if (data.city_id) payload.city = Number(data.city_id);
     return apiFetch("/api/organisations", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 
@@ -513,9 +545,12 @@ class ApiService {
       status: string;
     }>
   ): Promise<Organization> {
+    const payload: Record<string, unknown> = { ...data };
+    if (data.country_id !== undefined) { payload.country = Number(data.country_id); delete payload.country_id; }
+    if (data.city_id !== undefined) { payload.city = Number(data.city_id); delete payload.city_id; }
     return apiFetch(`/api/organisations/${id}`, {
       method: "PATCH",
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
   }
 

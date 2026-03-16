@@ -7,14 +7,15 @@ import { createContext, useContext, useState } from "react";
 
 interface BuildingContextValue {
   setSearchValue: (value: string) => void;
-  status: Building["status"] | null;
-  setStatus: (value: Building["status"] | null) => void;
-  location: string;
-  setLocation: (value: string) => void;
-  buildingType: string;
-  setBuildingType: (value: string) => void;
-  assignedTo: string;
-  setAssignedTo: (value: string) => void;
+  searchValue: string;
+  draft: boolean | null;
+  setDraft: (value: boolean | null) => void;
+  country: string;
+  setCountry: (value: string) => void;
+  climateZone: string;
+  setClimateZone: (value: string) => void;
+  organisation: string;
+  setOrganisation: (value: string) => void;
   buildings: Building[] | null;
   isLoading: boolean;
   isFetching: boolean;
@@ -35,29 +36,29 @@ export const BuildingProvider = ({
 }) => {
   const [searchValue, setSearchValue] = useState("");
   const debouncedSearchValue = useDebounce(searchValue, 500);
-  const [status, setStatus] = useState<Building["status"] | null>(null);
-  const [location, setLocation] = useState("");
-  const [buildingType, setBuildingType] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
+  const [draft, setDraft] = useState<boolean | null>(null);
+  const [country, setCountry] = useState("");
+  const [climateZone, setClimateZone] = useState("");
+  const [organisation, setOrganisation] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
       "buildings",
       debouncedSearchValue,
-      status,
-      location,
-      buildingType,
-      assignedTo,
+      draft,
+      country,
+      climateZone,
+      organisation,
       currentPage,
     ],
     queryFn: () =>
       apiService.getBuildings({
         search: debouncedSearchValue,
-        status,
-        location,
-        buildingType,
-        assignedTo,
+        draft,
+        country,
+        climateZone,
+        organisation,
         currentPage,
         pageSize: PAGE_SIZE,
       }),
@@ -78,15 +79,16 @@ export const BuildingProvider = ({
   return (
     <BuildingContext.Provider
       value={{
+        searchValue,
         setSearchValue,
-        status,
-        setStatus,
-        location,
-        setLocation,
-        buildingType,
-        setBuildingType,
-        assignedTo,
-        setAssignedTo,
+        draft,
+        setDraft,
+        country,
+        setCountry,
+        climateZone,
+        setClimateZone,
+        organisation,
+        setOrganisation,
         buildings,
         isLoading,
         isFetching,

@@ -1,171 +1,133 @@
+"use client";
 import { Icon } from "@/components/icon";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { delay } from "@/lib/helpers";
-import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect } from "react";
 import { useSteps } from "./steps.context";
 
+/** Tab names that correspond to API import steps (in order). */
+const EXPECTED_TABS = [
+  "Building Name and Location",
+  "Building Details",
+  "Operational Schedule and Temper",
+  "Cooling System",
+  "Ventilation System",
+  "Lightning System",
+  "Lift & Escalator System",
+  "Hot water System",
+  "Operational Energy Carriers",
+  "Structural Components",
+];
+
 export const MapFields = () => {
-  const { columns, setColumns, toggleComplete, item } = useSteps();
-  const [loadingIds, setLoadingIds] = useState<string[]>([]);
+  const { parsedSheets, toggleComplete, item } = useSteps();
 
-  const mismatchedCount = columns.filter((c) => c.status === "mismatch").length;
-
-  const handleFix = async (id: string, value: string | null) => {
-    if (!value) return;
-    // Optimistic update or wait for "backend"
-    setLoadingIds((prev) => [...prev, id]);
-
-    await delay(2000);
-    setColumns((prev) =>
-      prev.map((col) => {
-        if (col.id === id) {
-          // Check if matches original (simulation)
-          // In reality we'd probably just accept the mapping
-          return {
-            ...col,
-            requiredHeader: value,
-            status: "success",
-          };
-        }
-        return col;
-      }),
-    );
-    setLoadingIds((prev) => prev.filter((i) => i !== id));
+  // Auto-complete this informational step as soon as it mounts.
+  useEffect(() => {
     toggleComplete(item.id, true);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const detectedNames = parsedSheets.map((s) => s.name);
+
+  /** Match a sheet name against an expected tab prefix (case-insensitive). */
+  const matchesTab = (sheetName: string, tab: string) =>
+    sheetName.trim().toLowerCase().startsWith(tab.toLowerCase());
 
   return (
     <div className="size-full space-y-4 flex flex-col">
       <div className="space-y-1 shrink-0">
-        <h6 className="h6-title text-foreground">Map Your Columns</h6>
+        <h6 className="h6-title text-foreground">Review Detected Sheets</h6>
         <p className="paragraph-small text-(--text--sub-600)">
-          Map your file columns to BEAT data fields
+          The following sheets were found in your uploaded file. Recognised tabs
+          will be imported.
         </p>
       </div>
 
-      <div
-        className={cn(
-          "w-full flex items-center justify-center gap-3 px-12 py-3",
-          mismatchedCount > 0
-            ? "text-(--state--warning--base) bg-(--state--warning--lighter)"
-            : "text-(--state--success--base) bg-(--state--success--lighter)",
-        )}
-      >
-        <Icon
-          name={mismatchedCount > 0 ? "alert-fill" : "select-box-circle-fill"}
-          size={20}
-        />
-        <span className="label-small text-foreground">
-          {mismatchedCount > 0 ? (
-            <>
-              You have {mismatchedCount} column field mismatch •{" "}
-              <span className="paragraph-small">
-                Please fix this to continue
-              </span>
-            </>
-          ) : (
-            "All columns mapped successfully"
-          )}
-        </span>
-      </div>
-
-      <div className="w-full flex-1 no-scrollbar overflow-auto rounded-lg">
-        <Table>
-          <TableHeader className="bg-(--bg--weak-50) sticky top-0 z-10 border-none">
-            <TableRow>
-              <TableHead className="w-[33%]">
-                Your file’s imported column
-              </TableHead>
-              <TableHead className="w-[40.5%]">
-                System required headers
-              </TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody className="border-none">
-            {columns.map((col) => (
-              <TableRow key={col.id}>
-                <TableCell className="font-medium">{col.fileColumn}</TableCell>
-                <TableCell>
-                  {col.status === "mismatch" ? (
-                    <Select
-                      onValueChange={(val: string | null) =>
-                        handleFix(col.id, val)
-                      }
-                      disabled={loadingIds.includes(col.id)}
-                    >
-                      <SelectTrigger className="w-full bg-white h-9">
-                        <SelectValue placeholder="-- Select Header --" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {/* Mock options based on what's expected + some others */}
-                        <SelectItem value="building_identifer">
-                          building_identifer
-                        </SelectItem>
-                        <SelectItem value="building_address">
-                          building_address
-                        </SelectItem>
-                        <SelectItem value="region_state">
-                          region_state
-                        </SelectItem>
-                        <SelectItem value="building_city">
-                          building_city
-                        </SelectItem>
-                        <SelectItem value="country">country</SelectItem>
-                        {/* Add more as needed */}
-                      </SelectContent>
-                    </Select>
+      {parsedSheets.length === 0 ? (
+        <p className="paragraph-small text-(--text--sub-600)">
+          No sheets detected. Please go back and re-upload your file.
+        </p>
+      ) : (
+        <div className="w-full flex-1 overflow-auto no-scrollbar space-y-2">
+          {EXPECTED_TABS.map((tab) => {
+            const matchingSheets = parsedSheets.filter((s) =>
+              matchesTab(s.name, tab),
+            );
+            const found = matchingSheets.length > 0;
+            const sheet = matchingSheets[0];
+            return (
+              <div
+                key={tab}
+                className="flex items-center justify-between px-4 py-3 rounded-lg border border-border bg-(--bg--weak-50)"
+              >
+                <div className="flex items-center gap-3">
+                  {found ? (
+                    <Icon
+                      name="select-box-circle-fill"
+                      size={18}
+                      className="text-(--state--success--base)"
+                    />
                   ) : (
-                    <div className="h-9 px-3 py-2 border border-(--stroke--sub-300) rounded-md bg-(--bg--weak-50) text-(--text--main-900) text-sm w-full truncate">
-                      {col.requiredHeader ?? "--"}
-                    </div>
+                    <Icon
+                      name="close-circle-fill"
+                      size={18}
+                      className="text-(--text--sub-600) opacity-40"
+                    />
                   )}
-                </TableCell>
-                <TableCell>{col.type}</TableCell>
-                <TableCell>
-                  <div className="flex">
-                    {loadingIds.includes(col.id) ? (
-                      <Loader2
-                        size={18}
-                        className="animate-spin text-(--icon--sub-600)"
-                      />
-                    ) : col.status === "success" ? (
-                      <Icon
-                        name="select-box-circle-fill"
-                        size={20}
-                        className="text-(--state--success--base)"
-                      />
-                    ) : (
-                      <Icon
-                        name="error-warning-fill"
-                        size={20}
-                        className="text-(--state--warning--base)"
-                      />
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
+                  <span
+                    className={
+                      found
+                        ? "paragraph-small text-foreground"
+                        : "paragraph-small text-(--text--sub-600) opacity-50"
+                    }
+                  >
+                    {tab}
+                  </span>
+                </div>
+                {found && (
+                  <span className="label-x-small text-(--text--sub-600)">
+                    {matchingSheets.length > 1
+                      ? `${matchingSheets.length} sheets`
+                      : sheet
+                        ? `${Math.max(0, sheet.rows.length - 1)} row${sheet.rows.length - 1 !== 1 ? "s" : ""}`
+                        : ""}
+                  </span>
+                )}
+                {!found && (
+                  <span className="label-x-small text-(--text--sub-600) opacity-50">
+                    Not found
+                  </span>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Show any extra/unrecognised sheets */}
+          {detectedNames
+            .filter(
+              (n) =>
+                !EXPECTED_TABS.some((t) => matchesTab(n, t)) &&
+                n.toLowerCase() !== "list",
+            )
+            .map((n) => (
+              <div
+                key={n}
+                className="flex items-center justify-between px-4 py-3 rounded-lg border border-border bg-(--bg--weak-50)"
+              >
+                <div className="flex items-center gap-3">
+                  <Icon
+                    name="information-fill"
+                    size={18}
+                    className="text-(--state--warning--base)"
+                  />
+                  <span className="paragraph-small text-foreground">{n}</span>
+                </div>
+                <span className="label-x-small text-(--state--warning--base)">
+                  Unrecognised — will be skipped
+                </span>
+              </div>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+        </div>
+      )}
     </div>
   );
 };

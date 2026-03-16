@@ -20,20 +20,20 @@ export const steps: {
   nextLabel?: string;
 }[] = [
   { id: "upload", label: "Upload", component: Upload },
-  { id: "map-fields", label: "Map Fields", component: MapFields },
+  { id: "map-fields", label: "Review", component: MapFields },
   {
     id: "validate",
-    label: "Validate",
+    label: "Import",
     component: Validate,
     nextLabel: "Process and import",
   },
   {
     id: "preview",
-    label: "Preview & Confirm",
+    label: "Progress",
     component: Preview,
     nextLabel: "Confirm & Continue",
   },
-  { id: "process", label: "Process", component: Process },
+  { id: "process", label: "Complete", component: Process },
 ];
 
 export interface ImportColumn {
@@ -59,6 +59,13 @@ export interface ValidationResult {
   };
 }
 
+/** Parsed sheet from the uploaded Excel file. */
+export interface ParsedSheet {
+  name: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  rows: any[][];
+}
+
 interface StepsContextType {
   step: number;
   setStep: Dispatch<SetStateAction<number>>;
@@ -71,6 +78,14 @@ interface StepsContextType {
   validationResult: ValidationResult | null;
   setValidationResult: Dispatch<SetStateAction<ValidationResult | null>>;
   onSuccess: () => void;
+  /** The organisation ID selected in the parent import flow. */
+  organisationId: string | null;
+  /** The building UUID returned by the name-location import step. */
+  buildingUuid: string | null;
+  setBuildingUuid: Dispatch<SetStateAction<string | null>>;
+  /** Sheets parsed from the uploaded Excel file. */
+  parsedSheets: ParsedSheet[];
+  setParsedSheets: Dispatch<SetStateAction<ParsedSheet[]>>;
 }
 
 const StepsContext = createContext<StepsContextType | null>(null);
@@ -78,15 +93,19 @@ const StepsContext = createContext<StepsContextType | null>(null);
 export const StepsProvider = ({
   children,
   onSuccess,
+  organisationId,
 }: {
   children: React.ReactNode;
   onSuccess: () => void;
+  organisationId: string | null;
 }) => {
   const [step, setStep] = useState(0);
   const [completed, setCompleted] = useState<string[]>([]);
   const [columns, setColumns] = useState<ImportColumn[]>([]);
   const [validationResult, setValidationResult] =
     useState<ValidationResult | null>(null);
+  const [buildingUuid, setBuildingUuid] = useState<string | null>(null);
+  const [parsedSheets, setParsedSheets] = useState<ParsedSheet[]>([]);
   const item = steps[step];
 
   const toggleComplete = (id: string, value?: boolean) => {
@@ -117,6 +136,11 @@ export const StepsProvider = ({
         validationResult,
         setValidationResult,
         onSuccess,
+        organisationId,
+        buildingUuid,
+        setBuildingUuid,
+        parsedSheets,
+        setParsedSheets,
       }}
     >
       {children}

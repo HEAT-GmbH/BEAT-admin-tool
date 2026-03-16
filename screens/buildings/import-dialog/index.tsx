@@ -9,8 +9,9 @@ import { Footer } from "./footer";
 interface Props {
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  organisationId: string | null;
 }
-export const ImportDialog = ({ onOpenChange, onSuccess }: Props) => {
+export const ImportDialog = ({ onOpenChange, onSuccess, organisationId }: Props) => {
   return (
     <DialogContent className="right-side-dialog" showCloseButton={false}>
       <RightDialogHeader
@@ -18,7 +19,7 @@ export const ImportDialog = ({ onOpenChange, onSuccess }: Props) => {
         description="Follow our step-by-step wizard to quickly import building data from a CSV file or Excel sheet."
         onClose={() => onOpenChange(false)}
       />
-      <StepsProvider onSuccess={onSuccess}>
+      <StepsProvider onSuccess={onSuccess} organisationId={organisationId}>
         <Control />
         <Content />
         <Footer onCancel={() => onOpenChange(false)} />

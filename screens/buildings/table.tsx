@@ -2,13 +2,25 @@
 import { DataTable } from "@/components/data-table";
 import { Icon } from "@/components/icon";
 import { Loader } from "@/components/loader";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { selectColumn } from "@/constants/data-table";
 import { Building } from "@/models/building";
 import { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
 import { useBuildingContext } from "./building.context";
+
+function formatDate(dateStr: string): string {
+  if (!dateStr) return "—";
+  try {
+    return new Date(dateStr).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
 
 const columns: ColumnDef<Building>[] = [
   selectColumn as ColumnDef<Building>,
@@ -17,66 +29,81 @@ const columns: ColumnDef<Building>[] = [
     header: "Building name",
     cell: ({ row }) => <span className="font-medium">{row.original.name}</span>,
   },
-  { accessorKey: "location", header: "Location" },
-  { accessorKey: "created_on", header: "Created on" },
   {
-    accessorKey: "status",
+    id: "location",
+    header: "Location",
+    cell: ({ row }) => {
+      const { city, country } = row.original;
+      const parts = [city?.name, country?.name].filter(Boolean);
+      return <span>{parts.length > 0 ? parts.join(", ") : "—"}</span>;
+    },
+  },
+  {
+    accessorKey: "created_at",
+    header: "Created on",
+    cell: ({ row }) => <span>{formatDate(row.original.created_at)}</span>,
+  },
+  {
+    accessorKey: "draft",
     header: "Status",
-    cell: ({
-      row: {
-        original: { status },
-      },
-    }) => (
-      <Badge
-        variant="outline"
-        className="text-xs text-(text--sub-600) min-h-6 p-1 pr-2 rounded-[0.375rem]"
-      >
-        <>
-          {status === "Active" && (
-            <Icon
-              name="select-box-circle-fill"
-              color="var(--state--success--base)"
-              size={13}
-            />
-          )}
-          {status === "Archived" && (
-            <Icon
-              name="error-warning-fill"
-              color="var(--state--error--base)"
-              size={16}
-            />
-          )}
-          {status === "Draft" && (
-            <Icon
-              name="information-fill"
-              color="var(--state--information--base)"
-              size={16}
-            />
-          )}
-        </>
-        {status}
-      </Badge>
+    cell: ({ row }) => {
+      const isDraft = row.original.draft;
+      const status = isDraft ? "Draft" : "Published";
+      return (
+        <Badge
+          variant="outline"
+          className="text-xs text-(text--sub-600) min-h-6 p-1 pr-2 rounded-[0.375rem]"
+        >
+          <>
+            {!isDraft && (
+              <Icon
+                name="select-box-circle-fill"
+                color="var(--state--success--base)"
+                size={13}
+              />
+            )}
+            {isDraft && (
+              <Icon
+                name="information-fill"
+                color="var(--state--information--base)"
+                size={16}
+              />
+            )}
+          </>
+          {status}
+        </Badge>
+      );
+    },
+  },
+  {
+    id: "organisation",
+    header: "Organisation",
+    cell: ({ row }) => (
+      <span>{row.original.organisation?.name ?? "—"}</span>
     ),
   },
-  { accessorKey: "total_emissions", header: "Total Emissions" },
-  { accessorKey: "building_type", header: "Building type" },
   {
-    accessorKey: "assigned_to",
-    header: "Assigned to",
+    id: "climate_zone",
+    header: "Climate zone",
     cell: ({ row }) => (
-      <div className="flex items-center gap-2">
-        <Avatar className="h-6 w-6">
-          <AvatarImage
-            src={row.original.assigned_to.avatar}
-            alt={row.original.assigned_to.name}
-          />
-          <AvatarFallback>
-            {row.original.assigned_to.name.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <span className="text-slate-900">{row.original.assigned_to.name}</span>
-      </div>
+      <span>{row.original.climate_zone?.name ?? "—"}</span>
     ),
+  },
+  {
+    id: "total_floor_area",
+    header: "Floor area",
+    cell: ({ row }) => {
+      const area = row.original.total_floor_area;
+      return <span>{area ? `${area} m²` : "—"}</span>;
+    },
+  },
+  {
+    id: "total_carbon_footprint",
+    header: "Carbon footprint",
+    cell: ({ row }) => {
+      const val = row.original.total_carbon_footprint;
+      return <span>{val !== null && val !== undefined ? val.toFixed(2) : "—"}</span>;
+    },
   },
   {
     accessorKey: "actions",

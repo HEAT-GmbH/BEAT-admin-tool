@@ -32,9 +32,9 @@ export const Footer = ({ onCancel, onSuccess }: Props) => {
       industry: details.industry,
       country_id: details.country || undefined,
       city_id: details.city || undefined,
-      invite_users: invites
-        ? invites.filter((i) => i.email).map((i) => ({ email: i.email, role: i.role }))
-        : [],
+      invite_users: (invites ?? [])
+        .filter((i) => i.email && i.role)
+        .map((i) => ({ email: i.email!, role: i.role! })),
     });
     onSuccess();
   });
