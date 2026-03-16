@@ -1,39 +1,34 @@
 import { DUMMY_BUILDINGS } from "@/constants/dummy-buildings";
+import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
+import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
+import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
+import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
+import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
+import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
+import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
 import { DUMMY_ENERGY_CARRIERS } from "@/constants/dummy-energy-carriers";
-import { DUMMY_ORGANIZATIONS } from "@/constants/dummy-organizations";
+import { DUMMY_EPDS } from "@/constants/dummy-epds";
+import { DUMMY_BENCHMARKING_REPORT, DUMMY_BUILDING_EMISSION_REPORT, DUMMY_COMPLIANCE_REPORT, DUMMY_PORTFOLIO_SUMMARY_REPORT } from "@/constants/dummy-reports";
+import { DUMMY_USERS } from "@/constants/dummy-users";
 import { delay } from "@/lib/helpers";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
-import { Organization } from "@/models/organization";
-import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
-import { OperationalDataEntry, Material } from "@/screens/add-building/schema";
-import { EPD } from "@/models/epd";
-import { DUMMY_EPDS } from "@/constants/dummy-epds";
-import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
-import { DUMMY_COUNTRY_SETTINGS } from "@/constants/dummy-country-settings";
-import { CountrySetting } from "@/models/country-setting";
-import { ClimateType } from "@/models/climate-type";
-import { DUMMY_CLIMATE_TYPES } from "@/constants/dummy-client-types";
 import { BuildingType } from "@/models/building-type";
-import { DUMMY_SYSTEM_BUILDINGS } from "@/constants/dummy-system-buildings";
-import { GridEmissionFactor } from "@/models/grid-emission-factor";
-import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
-import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
-import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
-import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
-import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
+import { ClimateType } from "@/models/climate-type";
 import { CoolingSystemFactor } from "@/models/cooling-system";
-import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
+import { CountrySetting } from "@/models/country-setting";
+import { EPD } from "@/models/epd";
+import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
+import { GridEmissionFactor } from "@/models/grid-emission-factor";
 import { HotWaterSystemFactor } from "@/models/hot-water-system";
-import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
+import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
 import { LightingSystemFactor } from "@/models/lighting-system";
-import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
-import { VentilationSystemFactor } from "@/models/ventilation-system";
-import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
-import { DUMMY_BENCHMARKING_REPORT, DUMMY_BUILDING_EMISSION_REPORT, DUMMY_COMPLIANCE_REPORT, DUMMY_PORTFOLIO_SUMMARY_REPORT } from "@/constants/dummy-reports";
-import { BuildingEmissionSchema, GeneratedReport, Report, ReportSchema, ReportType } from "@/models/reports";
+import { GeneratedReport, Report, ReportSchema } from "@/models/reports";
 import { OrganizationUser } from "@/models/user";
-import { DUMMY_USERS } from "@/constants/dummy-users";
+import { VentilationSystemFactor } from "@/models/ventilation-system";
+import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
+import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
+import { OperationalDataEntry } from "@/screens/add-building/schema";
 
 type BasePaginatedTable = {
   search?: string;
@@ -41,82 +36,56 @@ type BasePaginatedTable = {
   pageSize: number;
 }
 
-class ApiService {
-  user: User | null = null;
+type DjangoPaginated<T> = {
+  results: T[];
+  pagination: { total: number; page: number; page_size: number; total_pages: number };
+};
 
-  async login(email: string, password: string) {
-    await delay(1000);
-    console.log(email, password);
-    this.user = {
-      email,
-      id: "1",
-      firstName: "Joseph",
-      lastName: "J.",
-      middleName: "",
-    };
+type PaginatedResult<T> = { data: T[]; currentPage: number; totalItems: number };
+
+function toQuery(params: BasePaginatedTable) {
+  return new URLSearchParams({
+    page: String(params.currentPage),
+    page_size: String(params.pageSize),
+    ...(params.search ? { search: params.search } : {}),
+  });
+}
+
+function toPageResult<T>(res: DjangoPaginated<T>): PaginatedResult<T> {
+  return {
+    data: res.results,
+    currentPage: res.pagination.page,
+    totalItems: res.pagination.total,
+  };
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, { headers: { "Content-Type": "application/json" }, ...init });
+  if (!res.ok) {
+    let message = `Request failed with status ${res.status}`;
+    try { const d = await res.json(); message = d.detail ?? d.message ?? message; } catch { /* ignore */ }
+    throw new Error(message);
+  }
+  return res.status === 204 ? (undefined as T) : res.json();
+}
+
+class ApiService {
+  async login(email: string, password: string): Promise<void> {
+    await apiFetch("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
   }
 
-  async logout() {
-    await delay(1000);
-    this.user = null;
+  async logout(): Promise<void> {
+    await apiFetch("/api/auth/logout", { method: "POST" });
   }
 
   async me(): Promise<User | null> {
-    await delay(1000);
-    return this.user;
-  }
-
-  async getOrganizations(params: {
-    search?: string;
-    industry?: string;
-    location?: string;
-    assignedTo?: string;
-    currentPage: number;
-    pageSize: number;
-  }): Promise<{
-    organizations: Organization[];
-    currentPage: number;
-    totalOrganizations: number;
-  } | null> {
-    await delay(1000);
-    let filteredOrgs = [...DUMMY_ORGANIZATIONS];
-
-    if (params.search) {
-      filteredOrgs = filteredOrgs.filter((org) =>
-        org.name.toLowerCase().includes(params.search!.toLowerCase())
-      );
+    try {
+      const data = await apiFetch<{ user: { id: string; email: string; username: string; first_name: string; last_name: string } }>("/api/auth/profile");
+      const u = data.user;
+      return { id: String(u.id), email: u.email, username: u.username, firstName: u.first_name, middleName: null, lastName: u.last_name };
+    } catch {
+      return null;
     }
-
-    if (params.industry && params.industry !== "All") {
-      filteredOrgs = filteredOrgs.filter(
-        (org) => org.industry === params.industry
-      );
-    }
-
-    if (params.location && params.location !== "All") {
-      filteredOrgs = filteredOrgs.filter((org) =>
-        org.location.toLowerCase().includes(params.location!.toLowerCase())
-      );
-    }
-
-    if (params.assignedTo && params.assignedTo !== "All") {
-      filteredOrgs = filteredOrgs.filter(
-        (org) => org.admin.name === params.assignedTo
-      );
-    }
-
-    const totalOrganizations = filteredOrgs.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedOrgs = filteredOrgs.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
-
-    return {
-      organizations: paginatedOrgs,
-      currentPage: params.currentPage,
-      totalOrganizations,
-    };
   }
 
   async getBuildings(params: {
@@ -304,88 +273,47 @@ class ApiService {
     };
   }
 
-  async getCountrySettings(params: BasePaginatedTable): Promise<{
-    data: CountrySetting[];
-    currentPage: number;
-    totalItems: number;
-  } | null> {
-    await delay(1000);
-    let filteredData = [...DUMMY_COUNTRY_SETTINGS];
-
-    if (params.search) {
-      filteredData = filteredData.filter((d) =>
-        d.name.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-
-    const totalItems = filteredData.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedData = filteredData.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
-
-    return {
-      data: paginatedData,
-      currentPage: params.currentPage,
-      totalItems,
-    };
+  async getClimateTypeDetail(id: string): Promise<ClimateType> {
+    return apiFetch(`/api/system-settings/climate-types/${id}`);
   }
 
-  async getClimateTypes(params: BasePaginatedTable): Promise<{
-    data: ClimateType[];
-    currentPage: number;
-    totalItems: number;
-  } | null> {
-    await delay(1000);
-    let filteredData = [...DUMMY_CLIMATE_TYPES];
-
-    if (params.search) {
-      filteredData = filteredData.filter((d) =>
-        d.type.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
-
-    const totalItems = filteredData.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedData = filteredData.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
-
-    return {
-      data: paginatedData as ClimateType[],
-      currentPage: params.currentPage,
-      totalItems,
-    };
+  async getCountryDetail(id: string): Promise<CountrySetting> {
+    return apiFetch(`/api/system-settings/countries/${id}`);
   }
 
-  async getBuildingTypes(params: BasePaginatedTable): Promise<{
-    data: BuildingType[];
-    currentPage: number;
-    totalItems: number;
-  } | null> {
-    await delay(1000);
-    let filteredData = [...DUMMY_SYSTEM_BUILDINGS];
+  async getBuildingTypeDetail(id: string): Promise<BuildingType> {
+    return apiFetch(`/api/system-settings/building-types/${id}`);
+  }
 
-    if (params.search) {
-      filteredData = filteredData.filter((d) =>
-        d.type.toLowerCase().includes(params.search!.toLowerCase())
-      );
-    }
+  async getCountrySettings(params: BasePaginatedTable): Promise<PaginatedResult<CountrySetting> | null> {
+    const q = toQuery(params);
+    return toPageResult(await apiFetch<DjangoPaginated<CountrySetting>>(`/api/system-settings/countries?${q}`));
+  }
 
-    const totalItems = filteredData.length;
-    const startIndex = (params.currentPage - 1) * params.pageSize;
-    const paginatedData = filteredData.slice(
-      startIndex,
-      startIndex + params.pageSize
-    );
+  async getClimateTypes(params: BasePaginatedTable): Promise<PaginatedResult<ClimateType> | null> {
+    const q = toQuery(params);
+    return toPageResult(await apiFetch<DjangoPaginated<ClimateType>>(`/api/system-settings/climate-types?${q}`));
+  }
 
-    return {
-      data: paginatedData as BuildingType[],
-      currentPage: params.currentPage,
-      totalItems,
-    };
+  async getBuildingTypes(params: BasePaginatedTable): Promise<PaginatedResult<BuildingType> | null> {
+    const q = toQuery(params);
+    return toPageResult(await apiFetch<DjangoPaginated<BuildingType>>(`/api/system-settings/building-types?${q}`));
+  }
+
+  async createClimateType(data: { name: string; description: string }): Promise<ClimateType> {
+    return apiFetch("/api/system-settings/climate-types", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateClimateType(id: string, data: { name: string; description: string; status: string }): Promise<ClimateType> {
+    return apiFetch(`/api/system-settings/climate-types/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+  }
+
+  async createBuildingType(data: { name: string; has_subtypes: boolean; subtypes: { name: string }[] }): Promise<BuildingType> {
+    return apiFetch("/api/system-settings/building-types", { method: "POST", body: JSON.stringify(data) });
+  }
+
+  async updateBuildingType(id: string, data: { name: string; has_subtypes: boolean; subtypes: { name: string }[] }): Promise<BuildingType> {
+    return apiFetch(`/api/system-settings/building-types/${id}`, { method: "PATCH", body: JSON.stringify(data) });
   }
 
   async getGridEmissionFactors(params: BasePaginatedTable): Promise<{

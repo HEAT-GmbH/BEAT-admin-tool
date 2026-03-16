@@ -8,7 +8,7 @@ import { ViewClimateDialog } from "./view-climate-dialog";
 
 const columns: ColumnDef<ClimateType>[] = [
   {
-    accessorKey: "type",
+    accessorKey: "name",
     header: "Climate type",
   },
   {

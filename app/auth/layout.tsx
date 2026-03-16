@@ -4,12 +4,8 @@ import { useAuth } from "@/contexts/auth.context";
 import { useRouter } from "next/navigation";
 import { useEffect, useEffectEvent } from "react";
 
-export default function AuthLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const { user } = useAuth();
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   const checkUser = useEffectEvent(() => {
