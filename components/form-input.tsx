@@ -18,10 +18,10 @@ import { Button } from "./ui/button";
 interface Props<T extends FieldValues> extends React.ComponentProps<"input"> {
   control: Control<T>;
   name: Path<T>;
-  schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  schema: z.ZodType<T>;
   id: string;
   label?: string | React.ReactNode;
-  placeholder: string;
+  placeholder?: string;
   autoComplete?: React.HTMLInputAutoCompleteAttribute;
   startIcon?: IconName;
   endIcon?: IconName;

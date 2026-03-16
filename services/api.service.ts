@@ -1,32 +1,34 @@
 import { DUMMY_BUILDINGS } from "@/constants/dummy-buildings";
+import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
+import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
+import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
+import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
+import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
+import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
+import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
 import { DUMMY_ENERGY_CARRIERS } from "@/constants/dummy-energy-carriers";
+import { DUMMY_EPDS } from "@/constants/dummy-epds";
+import { DUMMY_BENCHMARKING_REPORT, DUMMY_BUILDING_EMISSION_REPORT, DUMMY_COMPLIANCE_REPORT, DUMMY_PORTFOLIO_SUMMARY_REPORT } from "@/constants/dummy-reports";
+import { DUMMY_USERS } from "@/constants/dummy-users";
 import { delay } from "@/lib/helpers";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
-import { Organization } from "@/models/organization";
-import { UserListItem } from "@/models/user";
-import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
-import { OperationalDataEntry, Material } from "@/screens/add-building/schema";
-import { EPD } from "@/models/epd";
-import { DUMMY_EPDS } from "@/constants/dummy-epds";
-import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
-import { CountrySetting } from "@/models/country-setting";
-import { ClimateType } from "@/models/climate-type";
 import { BuildingType } from "@/models/building-type";
-import { GridEmissionFactor } from "@/models/grid-emission-factor";
-import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
-import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
-import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
-import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
-import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
+import { ClimateType } from "@/models/climate-type";
 import { CoolingSystemFactor } from "@/models/cooling-system";
-import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
+import { CountrySetting } from "@/models/country-setting";
+import { EPD } from "@/models/epd";
+import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
+import { GridEmissionFactor } from "@/models/grid-emission-factor";
 import { HotWaterSystemFactor } from "@/models/hot-water-system";
-import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
+import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
 import { LightingSystemFactor } from "@/models/lighting-system";
-import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
+import { GeneratedReport, Report, ReportSchema } from "@/models/reports";
+import { OrganizationUser } from "@/models/user";
 import { VentilationSystemFactor } from "@/models/ventilation-system";
-import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
+import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
+import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
+import { OperationalDataEntry } from "@/screens/add-building/schema";
 
 type BasePaginatedTable = {
   search?: string;
@@ -468,109 +470,68 @@ class ApiService {
     };
   }
 
-  // ── Organisations (real API) ──────────────────────────────────────────────
+  async getUsers(params: BasePaginatedTable): Promise<{
+    data: OrganizationUser[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_USERS];
 
-  async getOrganisations(params: {
-    search?: string;
-    industry?: string;
-    page?: number;
-    pageSize?: number;
-  }): Promise<PaginatedResult<Organization> | null> {
-    const q = new URLSearchParams();
-    if (params.search) q.set("search", params.search);
-    if (params.industry) q.set("industry", params.industry);
-    if (params.page) q.set("page", String(params.page));
-    if (params.pageSize) q.set("page_size", String(params.pageSize));
-    return toPageResult(
-      await apiFetch<DjangoPaginated<Organization>>(`/api/organisations?${q}`)
+    if (params.search) {
+      filteredData = filteredData.filter((user) =>
+        user.name.toLowerCase().includes(params.search!.toLowerCase()) ||
+        user.email.toLowerCase().includes(params.search!.toLowerCase()),
+      );
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
     );
+
+    return {
+      data: paginatedData,
+      currentPage: params.currentPage,
+      totalItems,
+    };
   }
 
-  async getOrganisationDetail(id: string): Promise<Organization> {
-    return apiFetch(`/api/organisations/${id}`);
-  }
+  async generateReport(params: ReportSchema | null): Promise<GeneratedReport | null>{
+    if(!params) return null;
+    await delay(1000);
+    let report: Report;
+    let auditNotes:string | undefined = undefined;
 
-  async createOrganisation(data: {
-    name: string;
-    industry: string;
-    country_id?: string;
-    city_id?: string;
-    invite_users?: { email: string; role: string }[];
-  }): Promise<Organization> {
-    return apiFetch("/api/organisations", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
+    switch (params.type) {
+      case "building_emission":
+        report = DUMMY_BUILDING_EMISSION_REPORT;
+        break;
+      case "portfolio_summary":
+        report = DUMMY_PORTFOLIO_SUMMARY_REPORT;
+        break;
+      case "compliance":
+        report = DUMMY_COMPLIANCE_REPORT;
+        auditNotes = "Data sourced from project-specific EPDs where available; generic ICE v3.0 factors used for remaining materials. Operational data based on 12-month utility records. This report is pending third-party review and should not be used for regulatory submissions until verified."
+        break;
+      case "benchmarking":
+        report = DUMMY_BENCHMARKING_REPORT;
+        break;
+      default:
+        return null;
+    }
 
-  async updateOrganisation(
-    id: string,
-    data: Partial<{
-      name: string;
-      industry: string;
-      country_id: string;
-      city_id: string;
-      status: string;
-    }>
-  ): Promise<Organization> {
-    return apiFetch(`/api/organisations/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
-  }
-
-  // ── Users (real API) ──────────────────────────────────────────────────────
-
-  async getUsers(params: {
-    search?: string;
-    role?: string;
-    organisation?: string;
-    page?: number;
-    pageSize?: number;
-  }): Promise<PaginatedResult<UserListItem> | null> {
-    const q = new URLSearchParams();
-    if (params.search) q.set("search", params.search);
-    if (params.role) q.set("role", params.role);
-    if (params.organisation) q.set("organisation", params.organisation);
-    if (params.page) q.set("page", String(params.page));
-    if (params.pageSize) q.set("page_size", String(params.pageSize));
-    return toPageResult(
-      await apiFetch<DjangoPaginated<UserListItem>>(`/api/users?${q}`)
-    );
-  }
-
-  async getUserDetail(id: string): Promise<UserListItem> {
-    return apiFetch(`/api/users/${id}`);
-  }
-
-  async createUser(data: {
-    first_name: string;
-    last_name: string;
-    email: string;
-    role: string;
-    organisation_id?: string;
-  }): Promise<UserListItem> {
-    return apiFetch("/api/users", {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-  }
-
-  async updateUser(
-    id: string,
-    data: Partial<{
-      first_name: string;
-      last_name: string;
-      email: string;
-      role: string;
-      organisation_id: string;
-      is_active: boolean;
-    }>
-  ): Promise<UserListItem> {
-    return apiFetch(`/api/users/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
+    return {
+      ...report,
+      config: {
+        ...report.config,
+        ...params.config,
+      },
+      generatedAt: new Date(),
+      auditNotes
+    } as GeneratedReport;
   }
 }
 

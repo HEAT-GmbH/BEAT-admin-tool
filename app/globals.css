@@ -59,7 +59,7 @@
   --primary: var(--primary-green);
   --primary-foreground: var(--text--strong-950);
   --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
+  --secondary-foreground: var(--text--sub-600);
   --muted: var(--bg--weak-50);
   --muted-foreground: var(--text--disabled-300);
   --accent: var(--bg--weak-50);
