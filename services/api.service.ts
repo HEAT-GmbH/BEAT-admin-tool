@@ -30,6 +30,10 @@ import { LightingSystemFactor } from "@/models/lighting-system";
 import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
 import { VentilationSystemFactor } from "@/models/ventilation-system";
 import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
+import { DUMMY_BENCHMARKING_REPORT, DUMMY_BUILDING_EMISSION_REPORT, DUMMY_COMPLIANCE_REPORT, DUMMY_PORTFOLIO_SUMMARY_REPORT } from "@/constants/dummy-reports";
+import { BuildingEmissionSchema, GeneratedReport, Report, ReportSchema, ReportType } from "@/models/reports";
+import { OrganizationUser } from "@/models/user";
+import { DUMMY_USERS } from "@/constants/dummy-users";
 
 type BasePaginatedTable = {
   search?: string;
@@ -536,6 +540,70 @@ class ApiService {
       currentPage: params.currentPage,
       totalItems,
     };
+  }
+
+  async getUsers(params: BasePaginatedTable): Promise<{
+    data: OrganizationUser[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_USERS];
+
+    if (params.search) {
+      filteredData = filteredData.filter((user) =>
+        user.name.toLowerCase().includes(params.search!.toLowerCase()) ||
+        user.email.toLowerCase().includes(params.search!.toLowerCase()),
+      );
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData,
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+  async generateReport(params: ReportSchema | null): Promise<GeneratedReport | null>{
+    if(!params) return null;
+    await delay(1000);
+    let report: Report;
+    let auditNotes:string | undefined = undefined;
+
+    switch (params.type) {
+      case "building_emission":
+        report = DUMMY_BUILDING_EMISSION_REPORT;
+        break;
+      case "portfolio_summary":
+        report = DUMMY_PORTFOLIO_SUMMARY_REPORT;
+        break;
+      case "compliance":
+        report = DUMMY_COMPLIANCE_REPORT;
+        auditNotes = "Data sourced from project-specific EPDs where available; generic ICE v3.0 factors used for remaining materials. Operational data based on 12-month utility records. This report is pending third-party review and should not be used for regulatory submissions until verified."
+        break;
+      case "benchmarking":
+        report = DUMMY_BENCHMARKING_REPORT;
+        break;
+      default:
+        return null;
+    }
+
+    return {
+      ...report,
+      config: {
+        ...report.config,
+        ...params.config,
+      },
+      generatedAt: new Date(),
+      auditNotes
+    } as GeneratedReport;
   }
 }
 

@@ -20,10 +20,10 @@ interface Props<T extends FieldValues> {
   }[];
   control: Control<T>;
   name: Path<T>;
-  schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
+  schema: z.ZodType<T>;
   id: string;
   label?: React.ReactNode;
-  placeholder: string;
+  placeholder?: string;
   defaultValue?: string;
   labelAddon?: React.ReactNode;
   hint?: React.ReactNode;
@@ -33,6 +33,8 @@ interface Props<T extends FieldValues> {
   labelContainerClassName?: string;
   fieldClassName?: string;
   anchorWidth?: boolean;
+  readOnly?: boolean;
+  transformValue?: (value: string) => string;
 }
 
 function FormSelect<T extends FieldValues>({
@@ -52,6 +54,8 @@ function FormSelect<T extends FieldValues>({
   labelContainerClassName,
   fieldClassName,
   anchorWidth,
+  readOnly,
+  transformValue,
 }: Props<T>) {
   const isRequired = fieldRequired ?? isFieldRequired(schema, name);
 
@@ -86,6 +90,7 @@ function FormSelect<T extends FieldValues>({
             value={field.value ?? ""}
             defaultValue={defaultValue}
             disabled={disabled}
+            readOnly={readOnly}
           >
             <SelectTrigger
               id={id}
@@ -97,11 +102,13 @@ function FormSelect<T extends FieldValues>({
               )}
               <SelectValue placeholder={placeholder}>
                 {(value: string) =>
-                  items.find((item) => item.value === value)?.item ?? (
-                    <span className="text-(--text--soft-400) paragraph-small font-normal">
-                      {placeholder}
-                    </span>
-                  )
+                  transformValue
+                    ? transformValue(value)
+                    : (items.find((item) => item.value === value)?.item ?? (
+                        <span className="text-(--text--soft-400) paragraph-small font-normal">
+                          {placeholder}
+                        </span>
+                      ))
                 }
               </SelectValue>
             </SelectTrigger>

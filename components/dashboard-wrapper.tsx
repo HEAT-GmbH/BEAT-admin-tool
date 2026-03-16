@@ -14,7 +14,7 @@ export const DashboardWrapper = ({
   const pathname = usePathname();
   const item = sidebarItems.find((item) => pathname.startsWith(item.href));
   return (
-    <div className="flex-1 border-t border-border flex items-stretch w-full">
+    <div className="flex-1 flex items-stretch w-full">
       {!!item?.innerSidebar?.length && (
         <section className="flex-1 max-w-61.5 border-r border-border py-3.75 px-3.25 flex flex-col gap-2.75">
           {item.innerSidebar.map((innerItem) => (
@@ -34,7 +34,13 @@ export const DashboardWrapper = ({
           ))}
         </section>
       )}
-      <div className={cn("p-8 flex-1", item?.innerSidebar?.length && "pl-4")}>
+      <div
+        className={cn(
+          "p-8 flex-1",
+          item?.innerSidebar?.length && "pl-4",
+          item?.noPadding && "p-0",
+        )}
+      >
         {children}
       </div>
     </div>

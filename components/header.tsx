@@ -32,7 +32,7 @@ export const Header = ({
   const item = sidebarItems.find((item) => pathname.startsWith(item.href));
 
   return (
-    <header className="w-full py-5 px-8 flex items-center gap-2">
+    <header className="w-full py-5 px-8 flex items-center gap-2 sticky top-0 bg-card border-b border-border z-20">
       <div className="flex-1">
         {startContent ? (
           startContent

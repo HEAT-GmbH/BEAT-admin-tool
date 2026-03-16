@@ -1,5 +1,9 @@
 import * as z from "zod";
 
+export function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 /**
  * Get the full name of a person
  * @param firstName - The first name
