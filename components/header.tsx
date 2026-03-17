@@ -77,11 +77,7 @@ export const Header = ({
         <Badge className="px-2 py-1.5 h-8.75 bg-background">
           <ProfilePic />
           <span className="text-foreground">
-            {user
-              ? user.firstName && user.lastName
-                ? `${user.firstName} ${user.lastName.charAt(0)}.`
-                : user.username ?? user.email
-              : ""}
+            {user?.firstName + " " + user?.lastName.charAt(0)}
           </span>
           <Icon name="caret-down" size={13} color="var(--icon--strong-950)" />
         </Badge>

@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { createContext, useContext, useEffect, useEffectEvent } from "react";
-import { toast } from "sonner";
 
 interface AuthContextType {
   user: User | null;
@@ -30,25 +29,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   });
   const router = useRouter();
 
-  const { mutateAsync: loginFn, isPending: isLoggingIn } = useMutation({
+  const { mutate: loginFn, isPending: isLoggingIn } = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       apiService.login(email, password),
     onSuccess: () => {
-      toast.success("Logged in successfully");
+      queryClient.invalidateQueries({ queryKey: ["user"] });
       refetch();
-    },
-    onError: (error: Error) => {
-      toast.error(error.message ?? "Login failed");
     },
   });
 
-  const { mutateAsync: logoutFn, isPending: isLoggingOut } = useMutation({
+  const { mutate: logoutFn, isPending: isLoggingOut } = useMutation({
     mutationFn: () => apiService.logout(),
     onSuccess: () => {
-      queryClient.setQueryData(["user"], null);
-    },
-    onError: () => {
-      toast.error("Logout failed");
+      queryClient.invalidateQueries({ queryKey: ["user"] });
     },
   });
 

@@ -14,7 +14,15 @@ import { Globe } from "lucide-react";
 import { useOrgContext } from "./context";
 
 export const Filters = () => {
-  const { searchValue, setSearchValue, industry, setIndustry, location, setLocation } = useOrgContext();
+  const {
+    setSearchValue,
+    industry,
+    setIndustry,
+    location,
+    setLocation,
+    assignedTo,
+    setAssignedTo,
+  } = useOrgContext();
 
   return (
     <div className="flex flex-wrap items-center gap-4">
@@ -24,7 +32,6 @@ export const Filters = () => {
           placeholder="Search..."
           groupClassName="h-9"
           className="pl-10"
-          value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
         />
       </div>
@@ -32,7 +39,7 @@ export const Filters = () => {
       <div className="flex items-center gap-2">
         <Select
           value={industry || "All"}
-          onValueChange={(val) => setIndustry(val === "All" ? "" : (val ?? ""))}
+          onValueChange={(val) => setIndustry(val || "All")}
         >
           <SelectTrigger className="w-[10.1875rem] h-9!">
             <span className="mr-1 text-(--text--sub-600)">Industry:</span>
@@ -48,7 +55,11 @@ export const Filters = () => {
 
         <VirtualizedCombobox
           options={[
-            { value: "All", label: "All locations", icon: <Globe className="h-4 w-4" /> },
+            {
+              value: "All",
+              label: "All locations",
+              icon: <Globe className="h-4 w-4" />,
+            },
             ...countriesService.getCountries().map(({ code, name }) => ({
               value: name,
               label: name,
@@ -56,11 +67,26 @@ export const Filters = () => {
             })),
           ]}
           value={location || "All"}
-          onValueChange={(val) => setLocation(val === "All" ? "" : (val ?? ""))}
+          onValueChange={(value) => setLocation(value || "All")}
           placeholder="Locations: All"
           searchPlaceholder="Search..."
           className="w-[10.1875rem] h-9"
         />
+
+        <Select
+          value={assignedTo || "All"}
+          onValueChange={(val) => setAssignedTo(val || "All")}
+        >
+          <SelectTrigger className="w-[11.1875rem] h-9!">
+            <span className="mr-1 text-(--text--sub-600)">Assigned to:</span>
+            <SelectValue placeholder="All" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All</SelectItem>
+            <SelectItem value="Liam Miller">Liam Miller</SelectItem>
+            <SelectItem value="Ava Thompson">Ava Thompson</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

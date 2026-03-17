@@ -58,8 +58,9 @@ export const sidebarItems: {
   },
   {
     label: "Activity Logs",
-    href: "#",
+    href: "/activity-logs",
     icon: "file-paper-2-fill",
+    noPadding: true
   },
   {
     label: "System Settings",

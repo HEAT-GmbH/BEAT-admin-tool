@@ -66,7 +66,7 @@ export const ReportProvider = ({ children }: { children: React.ReactNode }) => {
       }}
     >
       <FormProvider handleSubmit={handleSubmit} {...methods}>
-        <form onSubmit={handleSubmit(onSubmit)} className="grid max-h-full">
+        <form onSubmit={handleSubmit(onSubmit)} className="grid size-full">
           {children}
         </form>
       </FormProvider>

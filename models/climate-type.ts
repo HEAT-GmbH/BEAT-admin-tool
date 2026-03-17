@@ -1,7 +1,6 @@
 export interface ClimateType {
   id: string;
-  name: string;
+  type: string;
   description: string;
-  status: "active" | "inactive";
-  usage_count: number;
+  status: "Active" | "Inactive";
 }
