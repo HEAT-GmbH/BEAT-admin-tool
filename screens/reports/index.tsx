@@ -5,7 +5,7 @@ import { RightPanel } from "./right-panel";
 export const ReportsScreen = () => {
   return (
     <ReportProvider>
-      <section className="grid grid-cols-[auto_1fr] overflow-hidden bg-muted">
+      <section className="grid grid-cols-[auto_1fr] h-full overflow-hidden bg-muted">
         <LeftPanel />
         <RightPanel />
       </section>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useFormContext, useWatch } from "react-hook-form";
-import { AddOrgData, orgDetailsSchema } from "../schema";
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
 import { countriesService } from "@/services/countries.service";
-import { CircleFlag } from "react-circle-flags";
 import { useQuery } from "@tanstack/react-query";
+import { CircleFlag } from "react-circle-flags";
+import { useFormContext, useWatch } from "react-hook-form";
+import { AddOrgData, addOrgSchema } from "../schema";
 
 export const DetailsStep = () => {
   const { control } = useFormContext<AddOrgData>();
@@ -41,7 +41,7 @@ export const DetailsStep = () => {
         placeholder="eg. Big Corp Int."
         fieldRequired
         control={control}
-        schema={orgDetailsSchema}
+        schema={addOrgSchema}
       />
 
       <FormSelect
@@ -50,7 +50,7 @@ export const DetailsStep = () => {
         label="Industry"
         placeholder="Select an industry"
         control={control}
-        schema={orgDetailsSchema}
+        schema={addOrgSchema}
         items={[
           { value: "Construction", item: "Construction" },
           { value: "Manufacturing", item: "Manufacturing" },
@@ -65,7 +65,7 @@ export const DetailsStep = () => {
           label="Country of operation"
           placeholder="Select home country"
           control={control}
-          schema={orgDetailsSchema}
+          schema={addOrgSchema}
           items={countries}
         />
         <FormSelect
@@ -74,7 +74,7 @@ export const DetailsStep = () => {
           label="Organization's city"
           placeholder={isLoadingCities ? "Loading..." : "Select city"}
           control={control}
-          schema={orgDetailsSchema}
+          schema={addOrgSchema}
           items={cities.map((c) => ({ item: c.name, value: c.name }))}
           disabled={!country || isLoadingCities}
         />

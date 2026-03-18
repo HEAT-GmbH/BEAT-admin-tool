@@ -21,8 +21,10 @@ import { User } from "@/models/auth";
 import { Building } from "@/models/building";
 import { BuildingType } from "@/models/building-type";
 import { ClimateType } from "@/models/climate-type";
+import { CoolingSystemFactor } from "@/models/cooling-system";
 import { CountrySetting } from "@/models/country-setting";
 import { EPD } from "@/models/epd";
+import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
 import { GridEmissionFactor } from "@/models/grid-emission-factor";
 import { HotWaterSystemFactor } from "@/models/hot-water-system";
 import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
@@ -75,9 +77,9 @@ class ApiService {
     currentPage: number;
     pageSize: number;
   }): Promise<{
-    organizations: Organization[];
+    data: Organization[];
     currentPage: number;
-    totalOrganizations: number;
+    totalItems: number;
   } | null> {
     await delay(1000);
     let filteredOrgs = [...DUMMY_ORGANIZATIONS];
@@ -114,9 +116,9 @@ class ApiService {
     );
 
     return {
-      organizations: paginatedOrgs,
+      data: paginatedOrgs,
       currentPage: params.currentPage,
-      totalOrganizations,
+      totalItems: totalOrganizations,
     };
   }
 
@@ -129,9 +131,9 @@ class ApiService {
     currentPage: number;
     pageSize: number;
   }): Promise<{
-    buildings: Building[];
+    data: Building[];
     currentPage: number;
-    totalBuildings: number;
+    totalItems: number;
   } | null> {
     await delay(1000);
     let filteredBuildings = [...DUMMY_BUILDINGS];
@@ -174,13 +176,13 @@ class ApiService {
     );
 
     return {
-      buildings: paginatedBuildings,
+      data: paginatedBuildings,
       currentPage: params.currentPage,
-      totalBuildings,
+      totalItems: totalBuildings,
     };
   }
 
-  async getEnergyCarriers(params: OperationalDataEntrySearchSchema & {pageSize: number, currentPage: number}):Promise<{
+  async getEnergyCarriers(params: OperationalDataEntrySearchSchema & { pageSize: number, currentPage: number }): Promise<{
     data: OperationalDataEntry[];
     currentPage: number;
     totalItems: number;
@@ -395,7 +397,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_GRID_FACTORS];
+    const filteredData = [...DUMMY_EC_GRID_FACTORS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -417,7 +419,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_FUEL_FACTORS];
+    const filteredData = [...DUMMY_EC_FUEL_FACTORS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -439,7 +441,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_LIFT_ESCALATOR_SYSTEMS];
+    const filteredData = [...DUMMY_EC_LIFT_ESCALATOR_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -461,7 +463,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_LIGHTING_SYSTEMS];
+    const filteredData = [...DUMMY_EC_LIGHTING_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -483,7 +485,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_VENTILATION_SYSTEMS];
+    const filteredData = [...DUMMY_EC_VENTILATION_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -505,7 +507,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_HOT_WATER_SYSTEMS];
+    const filteredData = [...DUMMY_EC_HOT_WATER_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -527,7 +529,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_COOLING_SYSTEMS];
+    const filteredData = [...DUMMY_EC_COOLING_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -572,11 +574,11 @@ class ApiService {
     };
   }
 
-  async generateReport(params: ReportSchema | null): Promise<GeneratedReport | null>{
-    if(!params) return null;
+  async generateReport(params: ReportSchema | null): Promise<GeneratedReport | null> {
+    if (!params) return null;
     await delay(1000);
     let report: Report;
-    let auditNotes:string | undefined = undefined;
+    let auditNotes: string | undefined = undefined;
 
     switch (params.type) {
       case "building_emission":

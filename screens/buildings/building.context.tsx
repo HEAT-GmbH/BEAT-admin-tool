@@ -64,8 +64,8 @@ export const BuildingProvider = ({
     placeholderData: keepPreviousData,
   });
 
-  const buildings = data?.buildings || null;
-  const totalPages = data ? Math.ceil(data.totalBuildings / PAGE_SIZE) : 0;
+  const buildings = data?.data || null;
+  const totalPages = data ? Math.ceil(data.totalItems / PAGE_SIZE) : 0;
 
   const onNextPage = () => {
     setCurrentPage((prev) => prev + 1);

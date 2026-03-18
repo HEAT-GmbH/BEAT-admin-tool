@@ -6,11 +6,11 @@ import useDebounce from './use-debounce'
 
 interface Props<T> {
   queryKey: string;
-  pageSize: number;
+  pageSize?: number;
   queryFn: (params: {search: string, currentPage: number, pageSize: number}) => Promise<{data: T[], currentPage: number, totalItems: number} | null>;
 }
 
-export const usePaginationTable = <T>({queryKey, queryFn, pageSize}: Props<T>) => {
+export const usePaginationTable = <T>({queryKey, queryFn, pageSize = 10}: Props<T>) => {
   const [searchValue, setSearchValue] = useState("");
   const debouncedSearchValue = useDebounce(searchValue, 500);
   const [currentPage, setCurrentPage] = useState(1);

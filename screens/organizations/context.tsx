@@ -57,8 +57,8 @@ export const OrgProvider = ({ children }: { children: React.ReactNode }) => {
     placeholderData: keepPreviousData,
   });
 
-  const organizations = data?.organizations || null;
-  const totalPages = data ? Math.ceil(data.totalOrganizations / PAGE_SIZE) : 0;
+  const organizations = data?.data || null;
+  const totalPages = data ? Math.ceil(data.totalItems / PAGE_SIZE) : 0;
 
   const onNextPage = () => {
     setCurrentPage((prev) => prev + 1);

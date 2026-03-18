@@ -47,7 +47,7 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const { handleSubmit, control, ...methods } = useForm<AddBuildingForm>({
+  const { handleSubmit, control, ...methods } = useForm({
     resolver: zodResolver(schema),
     mode: "onBlur",
   });
