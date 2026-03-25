@@ -20,7 +20,7 @@ interface Props<T extends FieldValues> {
   }[];
   control: Control<T>;
   name: Path<T>;
-  schema: z.ZodType<T>;
+  schema: z.ZodTypeAny;
   id: string;
   label?: React.ReactNode;
   placeholder?: string;

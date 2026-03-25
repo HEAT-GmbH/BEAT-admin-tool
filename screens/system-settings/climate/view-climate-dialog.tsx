@@ -5,7 +5,9 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { ClimateType } from "@/models/climate-type";
 import { SSDialog } from "@/screens/components/dialog";
+import { apiService } from "@/services/api.service";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useEffectEvent } from "react";
 import {
   FormProvider,
@@ -13,6 +15,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 const schema = z.object({
@@ -34,6 +37,7 @@ export const ViewClimateDialog = ({
   onOpenChange,
   item,
 }: ClimateDialogProps) => {
+  const queryClient = useQueryClient();
   const { reset, handleSubmit, control, setValue, ...methods } =
     useForm<ClimateData>({
       resolver: zodResolver(schema),
@@ -51,17 +55,31 @@ export const ViewClimateDialog = ({
     name: "status",
   });
 
-  const onSubmit = (data: ClimateData) => {
-    console.log("Submit climate type:", data);
-    onOpenChange(false);
-    reset();
-  };
+  const { mutate, isPending } = useMutation({
+    mutationFn: (data: ClimateData) =>
+      apiService.updateClimateType(item!.id, {
+        name: data.type,
+        description: data.description,
+        status: data.status,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["climateTypes"] });
+      toast.success("Climate type updated successfully");
+      onOpenChange(false);
+      reset();
+    },
+    onError: () => {
+      toast.error("Failed to update climate type");
+    },
+  });
+
+  const onSubmit = (data: ClimateData) => mutate(data);
 
   const sync = useEffectEvent(() => {
     if (item) {
-      setValue("type", item.type);
+      setValue("type", item.name);
       setValue("description", item.description);
-      setValue("status", item.status);
+      setValue("status", item.status === "active" ? "Active" : "Inactive");
     } else {
       reset();
     }
@@ -75,9 +93,10 @@ export const ViewClimateDialog = ({
     <SSDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add climate type"
-      description="Add climate classifications for building assessments"
+      title="Edit climate type"
+      description="Update climate classifications for building assessments"
       onSubmit={handleSubmit(onSubmit)}
+      isLoading={isPending}
     >
       <FormProvider
         handleSubmit={handleSubmit}

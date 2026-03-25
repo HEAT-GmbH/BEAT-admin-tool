@@ -3,8 +3,9 @@
 import useDebounce from "@/hooks/use-debounce";
 import { Organization } from "@/models/organization";
 import { apiService } from "@/services/api.service";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useState } from "react";
+import { toast } from "sonner";
 
 interface OrgContextType {
   setSearchValue: (value: string) => void;
@@ -22,6 +23,14 @@ interface OrgContextType {
   totalPages: number;
   onNextPage: () => void;
   onPreviousPage: () => void;
+  createOrganisation: (data: {
+    name: string;
+    industry: string;
+    country_id?: string;
+    city_id?: string;
+    invite_users?: { email: string; role: string }[];
+  }) => Promise<Organization>;
+  isCreating: boolean;
 }
 
 export const OrgContext = createContext<OrgContextType | null>(null);
@@ -29,6 +38,7 @@ export const OrgContext = createContext<OrgContextType | null>(null);
 const PAGE_SIZE = 10;
 
 export const OrgProvider = ({ children }: { children: React.ReactNode }) => {
+  const queryClient = useQueryClient();
   const [searchValue, setSearchValue] = useState("");
   const debouncedSearchValue = useDebounce(searchValue, 500);
   const [industry, setIndustry] = useState("All");
@@ -46,15 +56,30 @@ export const OrgProvider = ({ children }: { children: React.ReactNode }) => {
       currentPage,
     ],
     queryFn: () =>
-      apiService.getOrganizations({
+      apiService.getOrganisations({
         search: debouncedSearchValue,
         industry,
-        location,
-        assignedTo,
-        currentPage,
+        page: currentPage,
         pageSize: PAGE_SIZE,
       }),
     placeholderData: keepPreviousData,
+  });
+
+  const { mutateAsync: createOrg, isPending: isCreating } = useMutation({
+    mutationFn: (data: {
+      name: string;
+      industry: string;
+      country_id?: string;
+      city_id?: string;
+      invite_users?: { email: string; role: string }[];
+    }) => apiService.createOrganisation(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      toast.success("Organisation created successfully");
+    },
+    onError: () => {
+      toast.error("Failed to create organisation");
+    },
   });
 
   const organizations = data?.data || null;
@@ -86,6 +111,8 @@ export const OrgProvider = ({ children }: { children: React.ReactNode }) => {
         totalPages,
         onNextPage,
         onPreviousPage,
+        createOrganisation: createOrg,
+        isCreating,
       }}
     >
       {children}

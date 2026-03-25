@@ -8,15 +8,15 @@ import { ViewBuildingDialog } from "./view-building-dialog";
 
 const columns: ColumnDef<BuildingType>[] = [
   {
-    accessorKey: "type",
+    accessorKey: "name",
     header: "Building type",
   },
   {
-    accessorKey: "hasSubTypes",
+    accessorKey: "has_subtypes",
     header: "Has sub types",
     cell: ({ row }) => (
       <span className="font-normal paragraph-small text-foreground">
-        {row.original.hasSubTypes ? "Yes" : "No"}
+        {row.original.has_subtypes ? "Yes" : "No"}
       </span>
     ),
   },
@@ -25,7 +25,7 @@ const columns: ColumnDef<BuildingType>[] = [
     header: "No. of sub types",
     cell: ({ row }) => (
       <span className="font-normal paragraph-small text-foreground">
-        {row.original.subTypes.length}
+        {row.original.subtype_count}
       </span>
     ),
   },

@@ -37,7 +37,7 @@ export const SSTable = <T,>({
             variant="outline"
             className="text-xs text-(text--sub-600) min-h-6 p-1 pr-2 rounded-[0.375rem] border-border"
           >
-            {status === "Active" ? (
+            {status?.toLowerCase() === "active" ? (
               <Icon
                 name="select-box-circle-fill"
                 color="var(--state--success--base)"
@@ -50,7 +50,7 @@ export const SSTable = <T,>({
                 size={16}
               />
             )}
-            {status}
+            {status ? status.charAt(0).toUpperCase() + status.slice(1) : ""}
           </Badge>
         );
       },

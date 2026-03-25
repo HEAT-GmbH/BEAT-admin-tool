@@ -4,7 +4,7 @@ import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui/button";
 
 interface Props {
-  list: { id: string; name: string }[];
+  list: { id: string; name?: string; [key: string]: unknown }[];
   onRemove: (index: number) => void;
 }
 

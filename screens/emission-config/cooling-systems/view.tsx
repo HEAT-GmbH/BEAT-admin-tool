@@ -73,24 +73,29 @@ export const ViewCoolingSystemDialog = ({
   const { reset, handleSubmit, control, setValue } = useForm({
     resolver: zodResolver(schema),
   });
+  type FactorField = { id: string; name: string; isActive: boolean };
   const {
     fields: subTypes,
     append: appendSubType,
     remove: removeSubType,
     update: updateSubType,
-  } = useFieldArray({
-    control,
-    name: "subTypes",
-  });
+  } = useFieldArray({ control, name: "subTypes" }) as unknown as {
+    fields: FactorField[];
+    append: (v: Omit<FactorField, "id">) => void;
+    remove: (i: number) => void;
+    update: (i: number, v: Omit<FactorField, "id">) => void;
+  };
   const {
     fields: refrigerants,
     append: appendRefrigerant,
     remove: removeRefrigerant,
     update: updateRefrigerant,
-  } = useFieldArray({
-    control,
-    name: "refrigerants",
-  });
+  } = useFieldArray({ control, name: "refrigerants" }) as unknown as {
+    fields: FactorField[];
+    append: (v: Omit<FactorField, "id">) => void;
+    remove: (i: number) => void;
+    update: (i: number, v: Omit<FactorField, "id">) => void;
+  };
 
   const onAddSubType = (data: z.infer<typeof addsubType>["subTypes"]) => {
     data.forEach((subType) => {
@@ -308,7 +313,7 @@ function AddSubTypeDialog({ open, onOpenChange, onSubmit }: AddSubTypeProps) {
         </div>
         <ChipList list={fields} onRemove={remove} />
         {!!errors.subTypes?.message && (
-          <p className="text-destructive text-sm">{errors.subTypes.message}</p>
+          <p className="text-destructive text-sm">{String(errors.subTypes.message)}</p>
         )}
       </form>
     </AddSSDialog>
@@ -389,7 +394,7 @@ function AddRefrigerantDialog({
         <ChipList list={fields} onRemove={remove} />
         {!!errors.refrigerants?.message && (
           <p className="text-destructive text-sm">
-            {errors.refrigerants.message}
+            {String(errors.refrigerants.message)}
           </p>
         )}
       </form>

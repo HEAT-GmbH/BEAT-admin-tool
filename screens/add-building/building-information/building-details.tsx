@@ -41,6 +41,7 @@ export function BuildingDetailsScreen() {
     value: String(st.id),
   }));
 
+
   const climateTypes = (climateTypesData?.data ?? []).map((ct) => ({
     item: ct.name,
     value: String(ct.id),

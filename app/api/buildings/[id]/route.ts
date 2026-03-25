@@ -8,3 +8,11 @@ export async function GET(
   const { id } = await params;
   return api(`/api/buildings/${id}/`);
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return api(`/api/buildings/${id}/`, { method: "DELETE" });
+}

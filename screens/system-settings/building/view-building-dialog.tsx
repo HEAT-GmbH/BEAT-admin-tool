@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BuildingType } from "@/models/building-type";
 import { SSDialog } from "@/screens/components/dialog";
+import { apiService } from "@/services/api.service";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useEffectEvent, useState } from "react";
 import {
   FormProvider,
   useController,
@@ -19,6 +21,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 const schema = z.object({
@@ -47,19 +50,24 @@ export const ViewBuildingDialog = ({
   onOpenChange,
   item,
 }: ViewBuildingDialogProps) => {
+  const queryClient = useQueryClient();
   const {
     reset,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, ...formState },
     ...methods
   } = useForm({
     resolver: zodResolver(schema),
   });
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "subTypes",
-  });
+  type SubTypeField = { id: string; type: string; isActive: boolean };
+  const { fields, append, remove, replace } = useFieldArray({ control, name: "subTypes" }) as unknown as {
+    fields: SubTypeField[];
+    append: (v: Omit<SubTypeField, "id">) => void;
+    remove: (i: number) => void;
+    replace: (v: Omit<SubTypeField, "id">[]) => void;
+  };
   const {
     field: { onChange },
   } = useController({
@@ -71,6 +79,38 @@ export const ViewBuildingDialog = ({
     name: "hasSubTypes",
   });
   const [subTypeInput, setSubTypeInput] = useState("");
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (data: ViewBuildingData) =>
+      apiService.updateBuildingType(item!.id, {
+        name: data.type,
+        has_subtypes: data.hasSubTypes,
+        subtypes: data.subTypes.map((s) => ({ name: s.type })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buildingTypes"] });
+      toast.success("Building type updated successfully");
+      onOpenChange(false);
+      reset();
+    },
+    onError: () => {
+      toast.error("Failed to update building type");
+    },
+  });
+
+  const sync = useEffectEvent(() => {
+    if (item) {
+      setValue("type", item.name);
+      setValue("hasSubTypes", item.has_subtypes);
+      replace(item.subtypes.map((s) => ({ type: s.name, isActive: true })));
+    } else {
+      reset();
+    }
+  });
+
+  useEffect(() => {
+    sync();
+  }, [item]);
 
   const handleAddSubType = () => {
     if (!subTypeInput.trim()) return;
@@ -85,24 +125,22 @@ export const ViewBuildingDialog = ({
     remove(index);
   };
 
-  const onSubmit = (data: ViewBuildingData) => {
-    console.log("Submit building type:", data);
-    onOpenChange(false);
-    reset();
-  };
+  const onSubmit = (data: ViewBuildingData) => mutate(data);
 
   return (
     <SSDialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add building type"
-      description="Add building categories and sub-types"
+      title="Edit building type"
+      description="Update building categories and sub-types"
       onSubmit={handleSubmit(onSubmit)}
+      isLoading={isPending}
     >
       <FormProvider
         handleSubmit={handleSubmit}
         control={control}
         reset={reset}
+        setValue={setValue}
         formState={{ errors, ...formState }}
         {...methods}
       >
@@ -187,7 +225,7 @@ export const ViewBuildingDialog = ({
                   </div>
                   {errors.subTypes && (
                     <span className="text-xs text-red-500">
-                      {errors.subTypes.message}
+                      {String(errors.subTypes.message)}
                     </span>
                   )}
                 </div>

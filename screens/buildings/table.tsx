@@ -2,11 +2,29 @@
 import { DataTable } from "@/components/data-table";
 import { Icon } from "@/components/icon";
 import { Loader } from "@/components/loader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { selectColumn } from "@/constants/data-table";
 import { Building } from "@/models/building";
 import { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Eye, Pencil, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useBuildingContext } from "./building.context";
 
 function formatDate(dateStr: string): string {
@@ -20,6 +38,66 @@ function formatDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
+}
+
+function RowActions({ building }: { building: Building }) {
+  const { deleteBuilding, isDeleting } = useBuildingContext();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const router = useRouter();
+
+  const handleConfirmDelete = async () => {
+    await deleteBuilding(building.id);
+    setConfirmOpen(false);
+  };
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<div />} className="p-1 rounded hover:bg-muted outline-none cursor-pointer">
+          <ChevronRight className="h-4 w-4 text-(--icon--sub-600)" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-40">
+          <DropdownMenuItem disabled className="gap-2 opacity-50 cursor-not-allowed">
+            <Eye className="h-4 w-4" />
+            View
+          </DropdownMenuItem>
+          <DropdownMenuItem className="gap-2" onClick={() => router.push(`/buildings/${building.id}/edit`)}>
+            <Pencil className="h-4 w-4" />
+            Edit
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2 text-destructive focus:text-destructive hover:text-destructive"
+            closeOnClick={false}
+            onClick={() => setConfirmOpen(true)}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete building?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <strong>{building.name}</strong> and all its data. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }
 
 const columns: ColumnDef<Building>[] = [
@@ -106,11 +184,9 @@ const columns: ColumnDef<Building>[] = [
     },
   },
   {
-    accessorKey: "actions",
+    id: "actions",
     header: "",
-    cell: () => (
-      <ChevronRight className="h-4 w-4 text-(--icon--sub-600)" size={12} />
-    ),
+    cell: ({ row }) => <RowActions building={row.original} />,
   },
 ];
 

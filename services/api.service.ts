@@ -68,7 +68,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
     try { const d = await res.json(); message = d.detail ?? d.message ?? message; } catch { /* ignore */ }
     throw new Error(message);
   }
-  return res.status === 204 ? (undefined as T) : res.json();
+  if (res.status === 204 || res.headers.get("content-length") === "0") return undefined as T;
+  const ct = res.headers.get("content-type") ?? "";
+  if (!ct.includes("application/json")) return undefined as T;
+  return res.json();
 }
 
 class ApiService {
@@ -82,9 +85,9 @@ class ApiService {
 
   async me(): Promise<User | null> {
     try {
-      const data = await apiFetch<{ user: { id: string; email: string; username: string; first_name: string; last_name: string } }>("/api/auth/profile");
+      const data = await apiFetch<{ user: { id: string; email: string; username: string; first_name: string; last_name: string; is_staff: boolean; is_superuser: boolean; role: string } }>("/api/auth/profile");
       const u = data.user;
-      return { id: String(u.id), email: u.email, username: u.username, firstName: u.first_name, middleName: null, lastName: u.last_name };
+      return { id: String(u.id), email: u.email, username: u.username, firstName: u.first_name, middleName: null, lastName: u.last_name, is_staff: u.is_staff, is_superuser: u.is_superuser, role: u.role ?? "" };
     } catch {
       return null;
     }
@@ -123,6 +126,14 @@ class ApiService {
       currentPage: data.pagination.page,
       totalBuildings: data.pagination.total,
     };
+  }
+
+  async getBuildingDetail(id: string): Promise<Building> {
+    return apiFetch(`/api/buildings/${id}`);
+  }
+
+  async deleteBuilding(id: string): Promise<void> {
+    await apiFetch(`/api/buildings/${id}`, { method: "DELETE" });
   }
 
   async exportBuildings(params: {

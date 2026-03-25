@@ -18,7 +18,7 @@ export const Organizations = ({ onOrganizationSelect }: Props) => {
     setSearchValue,
   } = usePaginationTable({
     queryKey: "organizations",
-    queryFn: (params) => apiService.getOrganizations(params),
+    queryFn: (params) => apiService.getOrganisations(params),
   });
 
   return (

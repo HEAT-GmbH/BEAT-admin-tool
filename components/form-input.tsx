@@ -18,7 +18,7 @@ import { Button } from "./ui/button";
 interface Props<T extends FieldValues> extends React.ComponentProps<"input"> {
   control: Control<T>;
   name: Path<T>;
-  schema: z.ZodType<T>;
+  schema: z.ZodTypeAny;
   id: string;
   label?: string | React.ReactNode;
   placeholder?: string;

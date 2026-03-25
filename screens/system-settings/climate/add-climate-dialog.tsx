@@ -2,8 +2,11 @@
 
 import FormInput from "@/components/form-input";
 import { SSDialog } from "@/screens/components/dialog";
+import { apiService } from "@/services/api.service";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FormProvider, useForm } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 const schema = z.object({
@@ -22,19 +25,27 @@ export const AddClimateDialog = ({
   open,
   onOpenChange,
 }: AddClimateDialogProps) => {
+  const queryClient = useQueryClient();
   const { reset, handleSubmit, control, ...methods } = useForm<AddClimateData>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      type: "",
-      description: "",
+    defaultValues: { type: "", description: "" },
+  });
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (data: AddClimateData) =>
+      apiService.createClimateType({ name: data.type, description: data.description }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["climateTypes"] });
+      toast.success("Climate type created successfully");
+      onOpenChange(false);
+      reset();
+    },
+    onError: () => {
+      toast.error("Failed to create climate type");
     },
   });
 
-  const onSubmit = (data: AddClimateData) => {
-    console.log("Submit climate type:", data);
-    onOpenChange(false);
-    reset();
-  };
+  const onSubmit = (data: AddClimateData) => mutate(data);
 
   return (
     <SSDialog
@@ -43,6 +54,7 @@ export const AddClimateDialog = ({
       title="Add climate type"
       description="Add climate classifications for building assessments"
       onSubmit={handleSubmit(onSubmit)}
+      isLoading={isPending}
     >
       <FormProvider
         handleSubmit={handleSubmit}

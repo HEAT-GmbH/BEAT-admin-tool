@@ -1,8 +1,9 @@
 "use client";
 import useDebounce from "@/hooks/use-debounce";
+import { toast } from "sonner";
 import { Building } from "@/models/building";
 import { apiService } from "@/services/api.service";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useState } from "react";
 
 interface BuildingContextValue {
@@ -24,6 +25,8 @@ interface BuildingContextValue {
   totalPages: number;
   onNextPage: () => void;
   onPreviousPage: () => void;
+  deleteBuilding: (id: string) => Promise<void>;
+  isDeleting: boolean;
 }
 
 const BuildingContext = createContext<BuildingContextValue | null>(null);
@@ -34,6 +37,7 @@ export const BuildingProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
+  const queryClient = useQueryClient();
   const [searchValue, setSearchValue] = useState("");
   const debouncedSearchValue = useDebounce(searchValue, 500);
   const [draft, setDraft] = useState<boolean | null>(null);
@@ -65,8 +69,19 @@ export const BuildingProvider = ({
     placeholderData: keepPreviousData,
   });
 
-  const buildings = data?.data || null;
-  const totalPages = data ? Math.ceil(data.totalItems / PAGE_SIZE) : 0;
+  const { mutateAsync: deleteMutation, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => apiService.deleteBuilding(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buildings"] });
+      toast.success("Building deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete building");
+    },
+  });
+
+  const buildings = data?.buildings || null;
+  const totalPages = data ? Math.ceil(data.totalBuildings / PAGE_SIZE) : 0;
 
   const onNextPage = () => {
     setCurrentPage((prev) => prev + 1);
@@ -97,6 +112,8 @@ export const BuildingProvider = ({
         totalPages,
         onNextPage,
         onPreviousPage,
+        deleteBuilding: deleteMutation,
+        isDeleting,
       }}
     >
       {children}

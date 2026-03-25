@@ -89,8 +89,9 @@ const columns: ColumnDef<Row>[] = [
 ];
 
 export const Roles = () => {
-  const userCount: Record<UserRole, number> = {
-    super_admin: 1,
+  const userCount: Partial<Record<string, number>> = {
+    superadmin: 1,
+    admin: 1,
     org_admin: 1,
     data_manager: 1,
     viewer: 1,
