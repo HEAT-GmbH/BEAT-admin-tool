@@ -1,34 +1,27 @@
 "use client";
 
+import useDebounce from "@/hooks/use-debounce";
 import { Organization } from "@/models/organization";
 import { apiService } from "@/services/api.service";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { createContext, useCallback, useContext } from "react";
-import { toast } from "sonner";
-import useDebounce from "@/hooks/use-debounce";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { createContext, useContext, useState } from "react";
 
 interface OrgContextType {
-  searchValue: string;
-  setSearchValue: (v: string) => void;
+  setSearchValue: (value: string) => void;
   industry: string;
-  setIndustry: (v: string) => void;
+  setIndustry: (value: string) => void;
   location: string;
-  setLocation: (v: string) => void;
+  setLocation: (value: string) => void;
+  assignedTo: string;
+  setAssignedTo: (value: string) => void;
   organizations: Organization[] | null;
   isLoading: boolean;
   isFetching: boolean;
   currentPage: number;
-  setCurrentPage: (v: number) => void;
+  setCurrentPage: (value: number) => void;
   totalPages: number;
   onNextPage: () => void;
   onPreviousPage: () => void;
-  createOrganisation: (data: {
-    name: string; industry: string;
-    country_id?: string; city_id?: string;
-    invite_users?: { email: string; role: string }[];
-  }) => Promise<Organization>;
-  isCreating: boolean;
 }
 
 export const OrgContext = createContext<OrgContextType | null>(null);
@@ -36,66 +29,65 @@ export const OrgContext = createContext<OrgContextType | null>(null);
 const PAGE_SIZE = 10;
 
 export const OrgProvider = ({ children }: { children: React.ReactNode }) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const queryClient = useQueryClient();
-
-  const searchValue = searchParams.get("search") ?? "";
-  const industry = searchParams.get("industry") ?? "";
-  const location = searchParams.get("location") ?? "";
-  const currentPage = Number(searchParams.get("page") ?? "1");
-
-  const debouncedSearch = useDebounce(searchValue, 500);
-
-  const updateParams = useCallback((updates: Record<string, string | undefined>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(updates).forEach(([k, v]) => {
-      if (!v) params.delete(k); else params.set(k, v);
-    });
-    router.push(`${pathname}?${params.toString()}`);
-  }, [router, pathname, searchParams]);
-
-  const setSearchValue = (v: string) => updateParams({ search: v || undefined, page: undefined });
-  const setIndustry = (v: string) => updateParams({ industry: v || undefined, page: undefined });
-  const setLocation = (v: string) => updateParams({ location: v || undefined, page: undefined });
-  const setCurrentPage = (v: number) => updateParams({ page: v === 1 ? undefined : String(v) });
-  const onNextPage = () => setCurrentPage(currentPage + 1);
-  const onPreviousPage = () => setCurrentPage(currentPage - 1);
+  const [searchValue, setSearchValue] = useState("");
+  const debouncedSearchValue = useDebounce(searchValue, 500);
+  const [industry, setIndustry] = useState("All");
+  const [location, setLocation] = useState("All");
+  const [assignedTo, setAssignedTo] = useState("All");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading, isFetching } = useQuery({
-    queryKey: ["organisations", debouncedSearch, industry, location, currentPage],
-    queryFn: () => apiService.getOrganisations({
-      search: debouncedSearch || undefined,
-      industry: industry || undefined,
-      page: currentPage,
-      pageSize: PAGE_SIZE,
-    }),
+    queryKey: [
+      "organizations",
+      debouncedSearchValue,
+      industry,
+      location,
+      assignedTo,
+      currentPage,
+    ],
+    queryFn: () =>
+      apiService.getOrganizations({
+        search: debouncedSearchValue,
+        industry,
+        location,
+        assignedTo,
+        currentPage,
+        pageSize: PAGE_SIZE,
+      }),
     placeholderData: keepPreviousData,
   });
 
-  const organizations = data?.data ?? null;
+  const organizations = data?.data || null;
   const totalPages = data ? Math.ceil(data.totalItems / PAGE_SIZE) : 0;
 
-  const { mutateAsync: createOrg, isPending: isCreating } = useMutation({
-    mutationFn: apiService.createOrganisation.bind(apiService),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["organisations"] });
-      toast.success("Organisation created successfully");
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
+  const onNextPage = () => {
+    setCurrentPage((prev) => prev + 1);
+  };
+
+  const onPreviousPage = () => {
+    setCurrentPage((prev) => prev - 1);
+  };
 
   return (
-    <OrgContext.Provider value={{
-      searchValue, setSearchValue,
-      industry, setIndustry,
-      location, setLocation,
-      organizations, isLoading, isFetching,
-      currentPage, setCurrentPage, totalPages, onNextPage, onPreviousPage,
-      createOrganisation: createOrg,
-      isCreating,
-    }}>
+    <OrgContext.Provider
+      value={{
+        setSearchValue,
+        industry,
+        setIndustry,
+        location,
+        setLocation,
+        assignedTo,
+        setAssignedTo,
+        organizations,
+        isLoading,
+        isFetching,
+        currentPage,
+        setCurrentPage,
+        totalPages,
+        onNextPage,
+        onPreviousPage,
+      }}
+    >
       {children}
     </OrgContext.Provider>
   );
@@ -103,6 +95,8 @@ export const OrgProvider = ({ children }: { children: React.ReactNode }) => {
 
 export const useOrgContext = () => {
   const context = useContext(OrgContext);
-  if (!context) throw new Error("useOrgContext must be used within OrgProvider");
+  if (!context) {
+    throw new Error("useOrgContext must be used within OrgProvider");
+  }
   return context;
 };

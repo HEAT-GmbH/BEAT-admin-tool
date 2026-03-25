@@ -21,12 +21,14 @@ interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
   isLoading?: boolean;
+  thClassName?: string;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   isLoading,
+  thClassName,
 }: DataTableProps<TData, TValue>) {
   const table = useReactTable({
     data,
@@ -41,7 +43,7 @@ export function DataTable<TData, TValue>({
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => {
               return (
-                <TableHead key={header.id}>
+                <TableHead key={header.id} className={thClassName}>
                   {header.isPlaceholder
                     ? null
                     : flexRender(

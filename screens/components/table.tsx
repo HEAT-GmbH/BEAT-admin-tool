@@ -37,7 +37,7 @@ export const SSTable = <T,>({
             variant="outline"
             className="text-xs text-(text--sub-600) min-h-6 p-1 pr-2 rounded-[0.375rem] border-border"
           >
-            {status === "Active" || status === "active" ? (
+            {status === "Active" ? (
               <Icon
                 name="select-box-circle-fill"
                 color="var(--state--success--base)"

@@ -10,18 +10,26 @@ const columns: ColumnDef<CountrySetting>[] = [
   {
     accessorKey: "name",
     header: "Country",
-    cell: ({ row }) => (
-      <span className="font-medium label-small text-(--text--strong-950)">
-        {row.original.name}
-      </span>
-    ),
+    cell: ({ row }) => {
+      const country = row.original;
+      return (
+        <div className="flex flex-col">
+          <span className="font-medium label-small text-(--text--strong-950)">
+            {country.name}
+          </span>
+          <span className="paragraph-small text-(--text--sub-600)">
+            Added on {country.addedOn}
+          </span>
+        </div>
+      );
+    },
   },
   {
-    accessorKey: "city_count",
+    accessorKey: "citiesCount",
     header: "No. Cities",
     cell: ({ row }) => (
       <span className="paragraph-small text-foreground">
-        {row.original.city_count}
+        {row.original.citiesCount}
       </span>
     ),
   },

@@ -5,11 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { CountryCity, CountrySetting } from "@/models/country-setting";
+import { CountrySetting } from "@/models/country-setting";
 import { SSDialog } from "@/screens/components/dialog";
 import { countriesService } from "@/services/countries.service";
-import { apiService } from "@/services/api.service";
-import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { CircleFlag } from "react-circle-flags";
 
@@ -21,18 +19,12 @@ interface Props {
 
 export const ViewDetailsDialog = ({ open, onOpenChange, item }: Props) => {
   const [cityInput, setCityInput] = useState("");
-  const [localItem, setLocalItem] = useState<(CountrySetting & { cities: CountryCity[] }) | null>(null);
+  const [localItem, setLocalItem] = useState<CountrySetting | null>(null);
   const [isEditCity, setIsEditCity] = useState(-1);
   const [editCityInput, setEditCityInput] = useState("");
 
-  const { data: detail } = useQuery({
-    queryKey: ["country-detail", item?.id],
-    queryFn: () => apiService.getCountryDetail(item!.id),
-    enabled: open && !!item,
-  });
-
   const isNewCity = (cityName: string) => {
-    return item ? !(item.cities ?? []).find((c) => c.name === cityName) : false;
+    return item ? !item?.cities.find((c) => c.name === cityName) : false;
   };
 
   const completeEditCity = () => {
@@ -59,7 +51,8 @@ export const ViewDetailsDialog = ({ open, onOpenChange, item }: Props) => {
         if (!prev) return null;
         return {
           ...prev,
-          cities: [{ name: trimmed, is_active: true }, ...prev.cities],
+          cities: [{ name: trimmed, isActive: true }, ...prev.cities],
+          citiesCount: prev.cities.length + 1,
         };
       });
     }
@@ -67,12 +60,10 @@ export const ViewDetailsDialog = ({ open, onOpenChange, item }: Props) => {
   };
 
   useEffect(() => {
-    if (detail) {
-      setLocalItem({ ...detail, cities: detail.cities ?? [] });
-    } else if (item && open) {
-      setLocalItem({ ...item, cities: [] });
+    if (item && open) {
+      setLocalItem({ ...item });
     }
-  }, [detail, item, open]);
+  }, [item, open]);
 
   if (!localItem) return null;
 
@@ -104,13 +95,13 @@ export const ViewDetailsDialog = ({ open, onOpenChange, item }: Props) => {
               {localItem.status}
             </span>
             <Switch
-              checked={localItem.status === "active"}
+              checked={localItem.status === "Active"}
               onCheckedChange={(c) =>
                 setLocalItem((prev) => {
                   if (!prev) return null;
                   return {
                     ...prev,
-                    status: c ? "active" : "inactive",
+                    status: c ? "Active" : "Inactive",
                   };
                 })
               }
@@ -201,21 +192,21 @@ export const ViewDetailsDialog = ({ open, onOpenChange, item }: Props) => {
                 <div className="flex items-center gap-6">
                   <div className="flex items-center gap-2">
                     <Switch
-                      checked={city.is_active}
-                      onCheckedChange={(is_active) => {
+                      checked={city.isActive}
+                      onCheckedChange={(isActive) => {
                         setLocalItem((prev) => {
                           if (!prev) return null;
                           return {
                             ...prev,
                             cities: prev.cities.map((c) =>
-                              c.name === city.name ? { ...c, is_active } : c,
+                              c.name === city.name ? { ...c, isActive } : c,
                             ),
                           };
                         });
                       }}
                     />
                     <span className="text-sm font-medium text-(--text--strong-950)">
-                      {city.is_active ? "Active" : "Inactive"}
+                      {city.isActive ? "Active" : "Inactive"}
                     </span>
                   </div>
                   <Button

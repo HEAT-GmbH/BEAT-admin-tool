@@ -5,9 +5,6 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { ClimateType } from "@/models/climate-type";
 import { SSDialog } from "@/screens/components/dialog";
-import { useClimateTypesContext } from "@/screens/system-settings/climate/context";
-import { apiService } from "@/services/api.service";
-import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useEffectEvent } from "react";
 import {
@@ -21,7 +18,7 @@ import * as z from "zod";
 const schema = z.object({
   type: z.string().min(1, "Climate type is required"),
   description: z.string().min(1, "Description is required"),
-  status: z.union([z.literal("active"), z.literal("inactive")]),
+  status: z.union([z.literal("Active"), z.literal("Inactive")]),
 });
 
 type ClimateData = z.infer<typeof schema>;
@@ -37,14 +34,6 @@ export const ViewClimateDialog = ({
   onOpenChange,
   item,
 }: ClimateDialogProps) => {
-  const { updateClimateType, isMutating } = useClimateTypesContext();
-
-  const { data: detail } = useQuery({
-    queryKey: ["climate-type-detail", item?.id],
-    queryFn: () => apiService.getClimateTypeDetail(item!.id),
-    enabled: open && !!item,
-  });
-
   const { reset, handleSubmit, control, setValue, ...methods } =
     useForm<ClimateData>({
       resolver: zodResolver(schema),
@@ -62,26 +51,25 @@ export const ViewClimateDialog = ({
     name: "status",
   });
 
-  const onSubmit = async (data: ClimateData) => {
-    if (!item) return;
-    await updateClimateType(item.id, { name: data.type, description: data.description, status: data.status });
+  const onSubmit = (data: ClimateData) => {
+    console.log("Submit climate type:", data);
     onOpenChange(false);
     reset();
   };
 
   const sync = useEffectEvent(() => {
-    if (detail) {
-      setValue("type", detail.name);
-      setValue("description", detail.description);
-      setValue("status", detail.status);
-    } else if (!item) {
+    if (item) {
+      setValue("type", item.type);
+      setValue("description", item.description);
+      setValue("status", item.status);
+    } else {
       reset();
     }
   });
 
   useEffect(() => {
     sync();
-  }, [detail, item]);
+  }, [item]);
 
   return (
     <SSDialog
@@ -90,7 +78,6 @@ export const ViewClimateDialog = ({
       title="Add climate type"
       description="Add climate classifications for building assessments"
       onSubmit={handleSubmit(onSubmit)}
-      isLoading={isMutating}
     >
       <FormProvider
         handleSubmit={handleSubmit}
@@ -124,8 +111,8 @@ export const ViewClimateDialog = ({
             <Field orientation="horizontal" className="h-8">
               <Switch
                 id="status"
-                checked={status === "active"}
-                onCheckedChange={(val) => onChange(val ? "active" : "inactive")}
+                checked={status === "Active"}
+                onCheckedChange={(val) => onChange(val ? "Active" : "Inactive")}
               />
               <FieldLabel
                 htmlFor="status"

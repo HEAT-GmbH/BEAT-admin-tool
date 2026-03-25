@@ -25,6 +25,8 @@ export const Pagination = ({
   onPreviousPage,
   className,
 }: PaginationProps) => {
+  if (totalPages <= 1) return null;
+
   const renderPages = () => {
     if (totalPages <= 5) {
       return Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (

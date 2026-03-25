@@ -1,31 +1,36 @@
+import { DUMMY_ACTIVITY_LOGS } from "@/constants/dummy-activity-log";
 import { DUMMY_ENERGY_CARRIERS } from "@/constants/dummy-energy-carriers";
+import { DUMMY_EPDS } from "@/constants/dummy-epds";
+import { DUMMY_BENCHMARKING_REPORT, DUMMY_BUILDING_EMISSION_REPORT, DUMMY_COMPLIANCE_REPORT, DUMMY_PORTFOLIO_SUMMARY_REPORT } from "@/constants/dummy-reports";
+import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
+import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
+import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
+import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
+import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
+import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
+import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
 import { delay } from "@/lib/helpers";
+import { ActivityLogEntry } from "@/models/activity-log";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
+import { BuildingType } from "@/models/building-type";
+import { ClimateType } from "@/models/climate-type";
+import { CoolingSystemFactor } from "@/models/cooling-system";
+import { CountrySetting } from "@/models/country-setting";
+import { EPD } from "@/models/epd";
+import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
+import { GridEmissionFactor } from "@/models/grid-emission-factor";
+import { HotWaterSystemFactor } from "@/models/hot-water-system";
+import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
+import { LightingSystemFactor } from "@/models/lighting-system";
 import { Organization } from "@/models/organization";
+import { GeneratedReport, Report, ReportSchema } from "@/models/reports";
 import { UserListItem } from "@/models/user";
+import { VentilationSystemFactor } from "@/models/ventilation-system";
+import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
 import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
 import { OperationalDataEntry, Material } from "@/screens/add-building/schema";
-import { EPD } from "@/models/epd";
-import { DUMMY_EPDS } from "@/constants/dummy-epds";
-import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
-import { CountrySetting } from "@/models/country-setting";
-import { ClimateType } from "@/models/climate-type";
-import { BuildingType } from "@/models/building-type";
-import { GridEmissionFactor } from "@/models/grid-emission-factor";
-import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
-import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
-import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
-import { LiftEscalatorSystemFactor } from "@/models/lift-escalator-system";
-import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
-import { CoolingSystemFactor } from "@/models/cooling-system";
-import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
-import { HotWaterSystemFactor } from "@/models/hot-water-system";
-import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
-import { LightingSystemFactor } from "@/models/lighting-system";
-import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
-import { VentilationSystemFactor } from "@/models/ventilation-system";
-import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
+import { isAfter, subDays, subHours } from "date-fns";
 
 type BasePaginatedTable = {
   search?: string;
@@ -345,7 +350,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_GRID_FACTORS];
+    const filteredData = [...DUMMY_EC_GRID_FACTORS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -367,7 +372,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_FUEL_FACTORS];
+    const filteredData = [...DUMMY_EC_FUEL_FACTORS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -389,7 +394,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_LIFT_ESCALATOR_SYSTEMS];
+    const filteredData = [...DUMMY_EC_LIFT_ESCALATOR_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -411,7 +416,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_LIGHTING_SYSTEMS];
+    const filteredData = [...DUMMY_EC_LIGHTING_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -433,7 +438,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_VENTILATION_SYSTEMS];
+    const filteredData = [...DUMMY_EC_VENTILATION_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -455,7 +460,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_HOT_WATER_SYSTEMS];
+    const filteredData = [...DUMMY_EC_HOT_WATER_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -477,7 +482,7 @@ class ApiService {
     totalItems: number;
   } | null> {
     await delay(1000);
-    let filteredData = [...DUMMY_EC_COOLING_SYSTEMS];
+    const filteredData = [...DUMMY_EC_COOLING_SYSTEMS];
 
     const totalItems = filteredData.length;
     const startIndex = (params.currentPage - 1) * params.pageSize;
@@ -491,6 +496,41 @@ class ApiService {
       currentPage: params.currentPage,
       totalItems,
     };
+  }
+
+  async generateReport(params: ReportSchema | null): Promise<GeneratedReport | null> {
+    if (!params) return null;
+    await delay(1000);
+    let report: Report;
+    let auditNotes: string | undefined = undefined;
+
+    switch (params.type) {
+      case "building_emission":
+        report = DUMMY_BUILDING_EMISSION_REPORT;
+        break;
+      case "portfolio_summary":
+        report = DUMMY_PORTFOLIO_SUMMARY_REPORT;
+        break;
+      case "compliance":
+        report = DUMMY_COMPLIANCE_REPORT;
+        auditNotes = "Data sourced from project-specific EPDs where available; generic ICE v3.0 factors used for remaining materials. Operational data based on 12-month utility records. This report is pending third-party review and should not be used for regulatory submissions until verified."
+        break;
+      case "benchmarking":
+        report = DUMMY_BENCHMARKING_REPORT;
+        break;
+      default:
+        return null;
+    }
+
+    return {
+      ...report,
+      config: {
+        ...report.config,
+        ...params.config,
+      },
+      generatedAt: new Date(),
+      auditNotes
+    } as GeneratedReport;
   }
 
   // ── Organisations (real API) ──────────────────────────────────────────────
@@ -606,6 +646,69 @@ class ApiService {
       method: "PATCH",
       body: JSON.stringify(data),
     });
+  }
+
+  async getActivityLogs(params: {
+    search?: string;
+    status?: string | "all";
+    category?: string | "all";
+    timeline?: string | "all";
+    currentPage: number;
+    pageSize: number;
+  }): Promise<{
+    data: ActivityLogEntry[];
+    currentPage: number;
+    totalItems: number;
+  } | null> {
+    await delay(500);
+    let filteredLogs = [...DUMMY_ACTIVITY_LOGS];
+
+    if (params.search) {
+      const s = params.search.toLowerCase();
+      filteredLogs = filteredLogs.filter(
+        (log) =>
+          log.userName.toLowerCase().includes(s) ||
+          log.description.toLowerCase().includes(s) ||
+          log.actionTarget.toLowerCase().includes(s)
+      );
+    }
+
+    if (params.status && params.status !== "all") {
+      filteredLogs = filteredLogs.filter((log) => log.status === params.status);
+    }
+
+    if (params.category && params.category !== "all") {
+      filteredLogs = filteredLogs.filter(
+        (log) => log.category === params.category
+      );
+    }
+
+    if (params.timeline && params.timeline !== "all") {
+      const now = new Date();
+      let threshold: Date;
+      if (params.timeline === "24hrs") threshold = subHours(now, 24);
+      else if (params.timeline === "7days") threshold = subDays(now, 7);
+      else if (params.timeline === "30days") threshold = subDays(now, 30);
+      else threshold = new Date(0);
+
+      filteredLogs = filteredLogs.filter((log) => isAfter(log.timestamp, threshold));
+    }
+
+    // Sort by most recent
+    filteredLogs.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    const totalItems = filteredLogs.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedLogs = filteredLogs.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedLogs,
+      currentPage: params.currentPage,
+      totalItems,
+    };
   }
 }
 

@@ -2,9 +2,9 @@
 
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
-import { useFieldArray, useFormContext } from "react-hook-form";
-import { AddOrgData, inviteUserSchema } from "../schema";
 import { useEffect, useEffectEvent } from "react";
+import { useFieldArray, useFormContext } from "react-hook-form";
+import { AddOrgData, addOrgSchema } from "../schema";
 
 export const InviteStep = () => {
   const { control } = useFormContext<AddOrgData>();
@@ -44,7 +44,7 @@ export const InviteStep = () => {
               label={index === 0 ? "Email address" : undefined}
               placeholder="hello@beat.com"
               control={control}
-              schema={inviteUserSchema}
+              schema={addOrgSchema}
             />
             <div className="flex items-end gap-2">
               <div className="flex-1">
@@ -54,7 +54,7 @@ export const InviteStep = () => {
                   label={index === 0 ? "Role" : undefined}
                   placeholder="Select a role"
                   control={control}
-                  schema={inviteUserSchema}
+                  schema={addOrgSchema}
                   items={[
                     { value: "admin", item: "Admin" },
                     { value: "data_manager", item: "Data Manager" },

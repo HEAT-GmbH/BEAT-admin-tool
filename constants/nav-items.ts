@@ -1,6 +1,13 @@
 import { IconName } from "@/models/icons";
 
-export const sidebarItems: { label: string; href: string; icon: IconName; breadcrumbIcon?: IconName; innerSidebar?: {label: string; href: string; icon: IconName}[] }[] = [
+export const sidebarItems: { 
+  label: string; 
+  href: string; 
+  icon: IconName; 
+  breadcrumbIcon?: IconName;
+  noPadding?: boolean;
+  innerSidebar?: {label: string; href: string; icon: IconName}[] 
+}[] = [
   {
     label: "Dashboard",
     href: "#",
@@ -29,8 +36,9 @@ export const sidebarItems: { label: string; href: string; icon: IconName; breadc
   },
   {
     label: "Reports",
-    href: "#",
+    href: "/reports",
     icon: "file-chart-fill",
+    noPadding: true
   },
   {
     label: "Data Management",
@@ -45,13 +53,14 @@ export const sidebarItems: { label: string; href: string; icon: IconName; breadc
   },
   {
     label: "User Management",
-    href: "#",
+    href: "/user-management",
     icon: "user-settings-fill",
   },
   {
     label: "Activity Logs",
-    href: "#",
+    href: "/activity-logs",
     icon: "file-paper-2-fill",
+    noPadding: true
   },
   {
     label: "System Settings",

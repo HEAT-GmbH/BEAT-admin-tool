@@ -81,7 +81,7 @@ export const ViewGridFactorDialog = ({
     formState: { errors, ...formState },
     setValue,
     ...methods
-  } = useForm<ViewGridFactorData>({
+  } = useForm({
     resolver: zodResolver(schema),
   });
   const { fields, append, remove, update } = useFieldArray({
