@@ -90,6 +90,7 @@ export const ImportButton = () => {
       <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
         <ImportDialog
           onOpenChange={setShowImportDialog}
+          organisationId={organization?.id ?? null}
           onSuccess={() => {
             setIsOpen(false);
             setShowImportDialog(false);

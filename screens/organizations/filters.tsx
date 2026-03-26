@@ -8,10 +8,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { VirtualizedCombobox } from "@/components/ui/virtualized-combobox";
-import { countriesService } from "@/services/countries.service";
-import { CircleFlag } from "react-circle-flags";
 import { Globe } from "lucide-react";
 import { useOrgContext } from "./context";
+import { apiService } from "@/services/api.service";
+import { useQuery } from "@tanstack/react-query";
 
 export const Filters = () => {
   const {
@@ -23,6 +23,20 @@ export const Filters = () => {
     assignedTo,
     setAssignedTo,
   } = useOrgContext();
+
+  const { data: countriesData } = useQuery({
+    queryKey: ["countries-list"],
+    queryFn: () => apiService.getCountrySettings({ currentPage: 1, pageSize: 300 }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const countryOptions = [
+    { value: "All", label: "All locations", icon: <Globe className="h-4 w-4" /> },
+    ...(countriesData?.data ?? []).map((c) => ({
+      value: c.name,
+      label: c.name,
+    })),
+  ];
 
   return (
     <div className="flex flex-wrap items-center gap-4">
@@ -47,25 +61,21 @@ export const Filters = () => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="All">All</SelectItem>
-            <SelectItem value="Construction">Construction</SelectItem>
-            <SelectItem value="Manufacturing">Manufacturing</SelectItem>
-            <SelectItem value="Technology">Technology</SelectItem>
+            <SelectItem value="construction">Construction</SelectItem>
+            <SelectItem value="manufacturing">Manufacturing</SelectItem>
+            <SelectItem value="technology">Technology</SelectItem>
+            <SelectItem value="finance">Finance</SelectItem>
+            <SelectItem value="healthcare">Healthcare</SelectItem>
+            <SelectItem value="education">Education</SelectItem>
+            <SelectItem value="real_estate">Real Estate</SelectItem>
+            <SelectItem value="energy">Energy</SelectItem>
+            <SelectItem value="retail">Retail</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
 
         <VirtualizedCombobox
-          options={[
-            {
-              value: "All",
-              label: "All locations",
-              icon: <Globe className="h-4 w-4" />,
-            },
-            ...countriesService.getCountries().map(({ code, name }) => ({
-              value: name,
-              label: name,
-              icon: <CircleFlag countryCode={code} className="h-4 w-4" />,
-            })),
-          ]}
+          options={countryOptions}
           value={location || "All"}
           onValueChange={(value) => setLocation(value || "All")}
           placeholder="Locations: All"

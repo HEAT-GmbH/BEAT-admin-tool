@@ -56,9 +56,8 @@ export const InviteStep = () => {
                   control={control}
                   schema={addOrgSchema}
                   items={[
-                    { value: "admin", item: "Administrator" },
-                    { value: "dataManager", item: "Data Manager" },
-                    { value: "auditor", item: "Auditor" },
+                    { value: "admin", item: "Admin" },
+                    { value: "data_manager", item: "Data Manager" },
                     { value: "viewer", item: "Viewer" },
                   ]}
                 />

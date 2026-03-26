@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SSDialog } from "@/screens/components/dialog";
+import { apiService } from "@/services/api.service";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   FormProvider,
@@ -18,6 +20,7 @@ import {
   useForm,
   useWatch,
 } from "react-hook-form";
+import { toast } from "sonner";
 import * as z from "zod";
 
 const schema = z.object({
@@ -44,6 +47,7 @@ export const AddBuildingDialog = ({
   open,
   onOpenChange,
 }: AddBuildingDialogProps) => {
+  const queryClient = useQueryClient();
   const {
     reset,
     handleSubmit,
@@ -53,10 +57,12 @@ export const AddBuildingDialog = ({
   } = useForm({
     resolver: zodResolver(schema),
   });
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "subTypes",
-  });
+  type SubTypeField = { id: string; type: string; isActive: boolean };
+  const { fields, append, remove } = useFieldArray({ control, name: "subTypes" }) as unknown as {
+    fields: SubTypeField[];
+    append: (v: Omit<SubTypeField, "id">) => void;
+    remove: (i: number) => void;
+  };
   const {
     field: { onChange },
   } = useController({
@@ -68,6 +74,24 @@ export const AddBuildingDialog = ({
     name: "hasSubTypes",
   });
   const [subTypeInput, setSubTypeInput] = useState("");
+
+  const { mutate, isPending } = useMutation({
+    mutationFn: (data: AddBuildingData) =>
+      apiService.createBuildingType({
+        name: data.type,
+        has_subtypes: data.hasSubTypes,
+        subtypes: data.subTypes.map((s) => ({ name: s.type })),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buildingTypes"] });
+      toast.success("Building type created successfully");
+      onOpenChange(false);
+      reset();
+    },
+    onError: () => {
+      toast.error("Failed to create building type");
+    },
+  });
 
   const handleAddSubType = () => {
     if (!subTypeInput.trim()) return;
@@ -82,11 +106,7 @@ export const AddBuildingDialog = ({
     remove(index);
   };
 
-  const onSubmit = (data: AddBuildingData) => {
-    console.log("Submit building type:", data);
-    onOpenChange(false);
-    reset();
-  };
+  const onSubmit = (data: AddBuildingData) => mutate(data);
 
   return (
     <SSDialog
@@ -95,6 +115,7 @@ export const AddBuildingDialog = ({
       title="Add building type"
       description="Add building categories and sub-types"
       onSubmit={handleSubmit(onSubmit)}
+      isLoading={isPending}
     >
       <FormProvider
         handleSubmit={handleSubmit}
@@ -184,7 +205,7 @@ export const AddBuildingDialog = ({
                   </div>
                   {errors.subTypes && (
                     <span className="text-xs text-red-500">
-                      {errors.subTypes.message}
+                      {String(errors.subTypes.message)}
                     </span>
                   )}
                 </div>

@@ -5,9 +5,8 @@ import { AddBuildingForm, schema } from "../schema";
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
 import { Icon } from "@/components/icon";
-import { countriesService } from "@/services/countries.service";
-import { useEffect, useEffectEvent, useState } from "react";
-import { CircleFlag } from "react-circle-flags";
+import { apiService } from "@/services/api.service";
+import { useEffect, useEffectEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useIsMounted } from "@/hooks/use-is-mounted";
 
@@ -15,36 +14,32 @@ export function BuildingNameLocationScreen() {
   const { control, setValue } = useFormContext<AddBuildingForm>();
   const mounted = useIsMounted();
 
-  const countries = countriesService.getCountries().map(({ code, name }) => ({
-    item: (
-      <div className="flex items-center gap-2">
-        <CircleFlag countryCode={code} className="h-4 w-4" />
-        <span>{name}</span>
-      </div>
-    ),
-    value: code,
-  }));
-
-  const country = useWatch<AddBuildingForm>({
+  const countryId = useWatch<AddBuildingForm>({
     control,
     name: "buildingInformation.buildingNameLocation.country",
   }) as string;
 
-  const region = useWatch<AddBuildingForm>({
+  const regionId = useWatch<AddBuildingForm>({
     control,
     name: "buildingInformation.buildingNameLocation.region",
   }) as string;
 
-  const { data: states = [], isFetching: isLoadingStates } = useQuery({
-    queryKey: ["states", country],
-    queryFn: () => countriesService.getStates(country!),
-    enabled: !!country,
+  const { data: countriesData, isLoading: isLoadingCountries } = useQuery({
+    queryKey: ["countries-list"],
+    queryFn: () => apiService.getCountrySettings({ currentPage: 1, pageSize: 300 }),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: regions = [], isFetching: isLoadingRegions } = useQuery({
+    queryKey: ["regions", countryId],
+    queryFn: () => apiService.getCountryRegions(countryId),
+    enabled: !!countryId,
   });
 
   const { data: cities = [], isFetching: isLoadingCities } = useQuery({
-    queryKey: ["cities", country, region],
-    queryFn: () => countriesService.getCities(country!, region!),
-    enabled: !!country && !!region,
+    queryKey: ["cities", countryId, regionId],
+    queryFn: () => apiService.getCountryCities(countryId, { regionId }),
+    enabled: !!countryId,
   });
 
   const countryEvent = useEffectEvent((c: string) => {
@@ -55,8 +50,8 @@ export function BuildingNameLocationScreen() {
   });
 
   useEffect(() => {
-    countryEvent(country);
-  }, [country]);
+    countryEvent(countryId);
+  }, [countryId]);
 
   const regionEvent = useEffectEvent((r: string) => {
     if (mounted && r) {
@@ -65,8 +60,13 @@ export function BuildingNameLocationScreen() {
   });
 
   useEffect(() => {
-    regionEvent(region);
-  }, [region]);
+    regionEvent(regionId);
+  }, [regionId]);
+
+  const countryItems = (countriesData?.data ?? []).map((c) => ({
+    item: c.name,
+    value: String(c.id),
+  }));
 
   return (
     <section className="grid grid-cols-2 gap-y-4 gap-x-2.25">
@@ -98,20 +98,33 @@ export function BuildingNameLocationScreen() {
           }
         />
       </div>
+      <div className="col-span-2">
+        <FormSelect
+          name="buildingInformation.buildingNameLocation.country"
+          id="building-country"
+          label="Country of building"
+          placeholder={isLoadingCountries ? "Loading..." : "Select a country"}
+          control={control}
+          schema={schema}
+          items={countryItems}
+          startIcon="global-line"
+          disabled={isLoadingCountries}
+        />
+      </div>
       <FormSelect
         name="buildingInformation.buildingNameLocation.region"
         id="building-region"
         label="Region or State"
         placeholder={
-          isLoadingStates ? "Loading states..." : "Select a region or state"
+          isLoadingRegions ? "Loading regions..." : "Select a region or state"
         }
         control={control}
         schema={schema}
-        items={states.map((s) => ({ item: s.name, value: s.name }))}
+        items={regions.map((r) => ({ item: r.name, value: String(r.id) }))}
         startIcon="flashlight-line"
-        disabled={!country || isLoadingStates}
+        disabled={!countryId || isLoadingRegions}
         hint={
-          !country && (
+          !countryId && (
             <div className="flex items-center gap-1.5 text-(--text--soft-400) text-xs">
               <Icon name="information-fill" size={14} />
               <span>Select a country first</span>
@@ -126,30 +139,18 @@ export function BuildingNameLocationScreen() {
         placeholder={isLoadingCities ? "Loading cities..." : "Select a city"}
         control={control}
         schema={schema}
-        items={cities.map((c) => ({ item: c.name, value: c.name }))}
+        items={cities.map((c) => ({ item: c.name, value: String(c.id) }))}
         startIcon="flashlight-line"
-        disabled={!region || isLoadingCities}
+        disabled={!countryId || isLoadingCities}
         hint={
-          !region && (
+          !countryId && (
             <div className="flex items-center gap-1.5 text-(--text--soft-400) text-xs">
               <Icon name="information-fill" size={14} />
-              <span>Select a Region or state first</span>
+              <span>Select a country first</span>
             </div>
           )
         }
       />
-      <div className="col-span-2">
-        <FormSelect
-          name="buildingInformation.buildingNameLocation.country"
-          id="building-country"
-          label="Country of building"
-          placeholder="Select a country..."
-          control={control}
-          schema={schema}
-          items={countries}
-          startIcon="global-line"
-        />
-      </div>
       <FormInput
         name="buildingInformation.buildingNameLocation.longitude"
         id="building-longitude"

@@ -65,22 +65,25 @@ export const AddCoolingSystemDialog = ({
   const { reset, handleSubmit, control, setValue, ...methods } = useForm({
     resolver: zodResolver(schema),
   });
+  type FactorField = { id: string; name: string; isActive: boolean };
   const {
     fields: subTypes,
     append: appendSubType,
     remove: removeSubType,
-  } = useFieldArray({
-    control,
-    name: "data.subTypes",
-  });
+  } = useFieldArray({ control, name: "data.subTypes" }) as unknown as {
+    fields: FactorField[];
+    append: (v: Omit<FactorField, "id">) => void;
+    remove: (i: number) => void;
+  };
   const {
     fields: refrigerants,
     append: appendRefrigerant,
     remove: removeRefrigerant,
-  } = useFieldArray({
-    control,
-    name: "data.refrigerants",
-  });
+  } = useFieldArray({ control, name: "data.refrigerants" }) as unknown as {
+    fields: FactorField[];
+    append: (v: Omit<FactorField, "id">) => void;
+    remove: (i: number) => void;
+  };
 
   const hasSubType = useWatch({
     control,

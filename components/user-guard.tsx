@@ -9,8 +9,11 @@ export default function UserGuard({ children }: PropsWithChildren) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
+  const isAuthorized = (u: typeof user) =>
+    !!u && (u.is_staff || u.is_superuser || u.role === "superadmin" || u.role === "admin");
+
   const checkUser = useEffectEvent(() => {
-    if (!user) {
+    if (!isAuthorized(user)) {
       router.replace("/auth");
     }
   });
@@ -26,5 +29,5 @@ export default function UserGuard({ children }: PropsWithChildren) {
     );
   }
 
-  return !user ? null : <>{children}</>;
+  return !isAuthorized(user) ? null : <>{children}</>;
 }

@@ -96,7 +96,9 @@ export function VirtualizedCombobox({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
+        {filteredOptions.length === 0 && (
+          <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
+        )}
         <div
           ref={setParent}
           className="overflow-auto hide-scrollbar mt-2"

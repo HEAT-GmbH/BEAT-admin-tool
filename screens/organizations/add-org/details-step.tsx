@@ -1,35 +1,34 @@
 "use client";
 
+import { useFormContext, useWatch } from "react-hook-form";
+import { AddOrgData, orgDetailsSchema } from "../schema";
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
-import { countriesService } from "@/services/countries.service";
+import { apiService } from "@/services/api.service";
 import { useQuery } from "@tanstack/react-query";
-import { CircleFlag } from "react-circle-flags";
-import { useFormContext, useWatch } from "react-hook-form";
-import { AddOrgData, addOrgSchema } from "../schema";
 
 export const DetailsStep = () => {
   const { control } = useFormContext<AddOrgData>();
 
-  const country = useWatch({
+  const countryId = useWatch({
     control,
     name: "details.country",
   });
 
-  const { data: cities = [], isFetching: isLoadingCities } = useQuery({
-    queryKey: ["cities", country],
-    queryFn: () => countriesService.getCities(country, ""), // Get all cities for country
-    enabled: !!country,
+  const { data: countriesData, isLoading: isLoadingCountries } = useQuery({
+    queryKey: ["org-countries"],
+    queryFn: () => apiService.getCountrySettings({ currentPage: 1, pageSize: 300 }),
   });
 
-  const countries = countriesService.getCountries().map(({ code, name }) => ({
-    item: (
-      <div className="flex items-center gap-2">
-        <CircleFlag countryCode={code.toLowerCase()} className="h-4 w-4" />
-        <span>{name}</span>
-      </div>
-    ),
-    value: code,
+  const { data: cities = [], isFetching: isLoadingCities } = useQuery({
+    queryKey: ["org-cities", countryId],
+    queryFn: () => apiService.getCountryCities(countryId, {}),
+    enabled: !!countryId,
+  });
+
+  const countryItems = (countriesData?.data ?? []).map((c) => ({
+    item: c.name,
+    value: String(c.id),
   }));
 
   return (
@@ -41,7 +40,7 @@ export const DetailsStep = () => {
         placeholder="eg. Big Corp Int."
         fieldRequired
         control={control}
-        schema={addOrgSchema}
+        schema={orgDetailsSchema}
       />
 
       <FormSelect
@@ -50,11 +49,18 @@ export const DetailsStep = () => {
         label="Industry"
         placeholder="Select an industry"
         control={control}
-        schema={addOrgSchema}
+        schema={orgDetailsSchema}
         items={[
-          { value: "Construction", item: "Construction" },
-          { value: "Manufacturing", item: "Manufacturing" },
-          { value: "Technology", item: "Technology" },
+          { value: "construction", item: "Construction" },
+          { value: "manufacturing", item: "Manufacturing" },
+          { value: "technology", item: "Technology" },
+          { value: "finance", item: "Finance" },
+          { value: "healthcare", item: "Healthcare" },
+          { value: "education", item: "Education" },
+          { value: "real_estate", item: "Real Estate" },
+          { value: "energy", item: "Energy" },
+          { value: "retail", item: "Retail" },
+          { value: "other", item: "Other" },
         ]}
       />
 
@@ -63,10 +69,11 @@ export const DetailsStep = () => {
           name="details.country"
           id="org-country"
           label="Country of operation"
-          placeholder="Select home country"
+          placeholder={isLoadingCountries ? "Loading..." : "Select home country"}
           control={control}
-          schema={addOrgSchema}
-          items={countries}
+          schema={orgDetailsSchema}
+          items={countryItems}
+          disabled={isLoadingCountries}
         />
         <FormSelect
           name="details.city"
@@ -74,9 +81,9 @@ export const DetailsStep = () => {
           label="Organization's city"
           placeholder={isLoadingCities ? "Loading..." : "Select city"}
           control={control}
-          schema={addOrgSchema}
-          items={cities.map((c) => ({ item: c.name, value: c.name }))}
-          disabled={!country || isLoadingCities}
+          schema={orgDetailsSchema}
+          items={cities.map((c) => ({ item: c.name, value: String(c.id) }))}
+          disabled={!countryId || isLoadingCities}
         />
       </div>
     </div>

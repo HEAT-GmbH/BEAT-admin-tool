@@ -2,9 +2,9 @@
 import type { User } from "@/models/auth";
 import { apiService } from "@/services/api.service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import type { ReactNode } from "react";
-import { createContext, useContext, useEffect, useEffectEvent } from "react";
+import { createContext, useContext } from "react";
 
 interface AuthContextType {
   user: User | null;
@@ -22,19 +22,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const {
     data: user = null,
     isLoading,
-    refetch,
   } = useQuery({
     queryKey: ["user"],
     queryFn: () => apiService.me(),
   });
-  const router = useRouter();
-
   const { mutate: loginFn, isPending: isLoggingIn } = useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       apiService.login(email, password),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["user"] });
-      refetch();
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Invalid email or password");
     },
   });
 
@@ -53,16 +52,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await logoutFn();
   };
 
-  const checkAuthEffect = useEffectEvent((exists: boolean) => {
-    if (!exists) {
-      router.push("/auth");
-    }
-  });
-
-  useEffect(() => {
-    console.log(user);
-    checkAuthEffect(!!user);
-  }, [user]);
 
   return (
     <AuthContext.Provider

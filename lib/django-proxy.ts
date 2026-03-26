@@ -42,14 +42,15 @@ export async function api(
     return NextResponse.json({ detail: "Could not reach backend" }, { status: 502 });
   }
 
-  if (response.status === 204) {
-    return NextResponse.json(null, { status: 204 });
+  if (response.status === 204 || response.status === 200 && method === "DELETE") {
+    return new NextResponse(null, { status: response.status });
   }
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
-    console.error("[django-proxy] non-JSON response from Django:", response.status, await response.text());
-    return NextResponse.json({ detail: "Unexpected response from backend" }, { status: 502 });
+    const text = await response.text();
+    console.error("[django-proxy] non-JSON response from Django:", response.status, text);
+    return NextResponse.json({ detail: "Unexpected response from backend" }, { status: response.status });
   }
 
   const data = await response.json();

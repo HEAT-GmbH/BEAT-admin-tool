@@ -18,6 +18,7 @@ interface Props {
 export const AddOrgDialog = ({ onOpenChange, onSuccess }: Props) => {
   const methods = useForm<AddOrgData>({
     resolver: zodResolver(addOrgSchema) as any,
+    mode: "onTouched",
     defaultValues: {
       details: {
         name: "",

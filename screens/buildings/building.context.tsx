@@ -1,20 +1,22 @@
 "use client";
 import useDebounce from "@/hooks/use-debounce";
+import { toast } from "sonner";
 import { Building } from "@/models/building";
 import { apiService } from "@/services/api.service";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useContext, useState } from "react";
 
 interface BuildingContextValue {
   setSearchValue: (value: string) => void;
-  status: Building["status"] | null;
-  setStatus: (value: Building["status"] | null) => void;
-  location: string;
-  setLocation: (value: string) => void;
-  buildingType: string;
-  setBuildingType: (value: string) => void;
-  assignedTo: string;
-  setAssignedTo: (value: string) => void;
+  searchValue: string;
+  draft: boolean | null;
+  setDraft: (value: boolean | null) => void;
+  country: string;
+  setCountry: (value: string) => void;
+  climateZone: string;
+  setClimateZone: (value: string) => void;
+  organisation: string;
+  setOrganisation: (value: string) => void;
   buildings: Building[] | null;
   isLoading: boolean;
   isFetching: boolean;
@@ -23,6 +25,8 @@ interface BuildingContextValue {
   totalPages: number;
   onNextPage: () => void;
   onPreviousPage: () => void;
+  deleteBuilding: (id: string) => Promise<void>;
+  isDeleting: boolean;
 }
 
 const BuildingContext = createContext<BuildingContextValue | null>(null);
@@ -33,39 +37,51 @@ export const BuildingProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
+  const queryClient = useQueryClient();
   const [searchValue, setSearchValue] = useState("");
   const debouncedSearchValue = useDebounce(searchValue, 500);
-  const [status, setStatus] = useState<Building["status"] | null>(null);
-  const [location, setLocation] = useState("");
-  const [buildingType, setBuildingType] = useState("");
-  const [assignedTo, setAssignedTo] = useState("");
+  const [draft, setDraft] = useState<boolean | null>(null);
+  const [country, setCountry] = useState("");
+  const [climateZone, setClimateZone] = useState("");
+  const [organisation, setOrganisation] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
   const { data, isLoading, isFetching } = useQuery({
     queryKey: [
       "buildings",
       debouncedSearchValue,
-      status,
-      location,
-      buildingType,
-      assignedTo,
+      draft,
+      country,
+      climateZone,
+      organisation,
       currentPage,
     ],
     queryFn: () =>
       apiService.getBuildings({
         search: debouncedSearchValue,
-        status,
-        location,
-        buildingType,
-        assignedTo,
+        draft,
+        country,
+        climateZone,
+        organisation,
         currentPage,
         pageSize: PAGE_SIZE,
       }),
     placeholderData: keepPreviousData,
   });
 
-  const buildings = data?.data || null;
-  const totalPages = data ? Math.ceil(data.totalItems / PAGE_SIZE) : 0;
+  const { mutateAsync: deleteMutation, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => apiService.deleteBuilding(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["buildings"] });
+      toast.success("Building deleted successfully");
+    },
+    onError: () => {
+      toast.error("Failed to delete building");
+    },
+  });
+
+  const buildings = data?.buildings || null;
+  const totalPages = data ? Math.ceil(data.totalBuildings / PAGE_SIZE) : 0;
 
   const onNextPage = () => {
     setCurrentPage((prev) => prev + 1);
@@ -78,15 +94,16 @@ export const BuildingProvider = ({
   return (
     <BuildingContext.Provider
       value={{
+        searchValue,
         setSearchValue,
-        status,
-        setStatus,
-        location,
-        setLocation,
-        buildingType,
-        setBuildingType,
-        assignedTo,
-        setAssignedTo,
+        draft,
+        setDraft,
+        country,
+        setCountry,
+        climateZone,
+        setClimateZone,
+        organisation,
+        setOrganisation,
         buildings,
         isLoading,
         isFetching,
@@ -95,6 +112,8 @@ export const BuildingProvider = ({
         totalPages,
         onNextPage,
         onPreviousPage,
+        deleteBuilding: deleteMutation,
+        isDeleting,
       }}
     >
       {children}

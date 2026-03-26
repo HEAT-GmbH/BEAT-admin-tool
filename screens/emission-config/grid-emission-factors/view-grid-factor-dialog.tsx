@@ -84,10 +84,13 @@ export const ViewGridFactorDialog = ({
   } = useForm({
     resolver: zodResolver(schema),
   });
-  const { fields, append, remove, update } = useFieldArray({
-    control,
-    name: "gridFactors",
-  });
+  type GridFactorField = { id: string; year: string; gridFactor: number; unit: string; status: "Active" | "Inactive" };
+  const { fields, append, remove, update } = useFieldArray({ control, name: "gridFactors" }) as unknown as {
+    fields: GridFactorField[];
+    append: (v: Omit<GridFactorField, "id">) => void;
+    remove: (i: number) => void;
+    update: (i: number, v: Omit<GridFactorField, "id">) => void;
+  };
 
   const {
     control: editControl,
