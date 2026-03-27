@@ -1,22 +1,25 @@
 import { DUMMY_ACTIVITY_LOGS } from "@/constants/dummy-activity-log";
+import { DUMMY_DATA_MANAGEMENT_EXPORTS, DUMMY_DATA_MANAGEMENT_IMPORTS } from "@/constants/dummy-data-management";
+import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
+import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
+import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
+import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
+import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
+import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
+import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
 import { DUMMY_ENERGY_CARRIERS } from "@/constants/dummy-energy-carriers";
 import { DUMMY_EPDS } from "@/constants/dummy-epds";
 import { DUMMY_BENCHMARKING_REPORT, DUMMY_BUILDING_EMISSION_REPORT, DUMMY_COMPLIANCE_REPORT, DUMMY_PORTFOLIO_SUMMARY_REPORT } from "@/constants/dummy-reports";
-import { DUMMY_EC_GRID_FACTORS } from "@/constants/dummy-ec-grid-factors";
-import { DUMMY_EC_FUEL_FACTORS } from "@/constants/dummy-ec-fuel-factors";
-import { DUMMY_EC_LIFT_ESCALATOR_SYSTEMS } from "@/constants/dummy-ec-lift-escalator-system";
-import { DUMMY_EC_COOLING_SYSTEMS } from "@/constants/dummy-ec-cooling-systems";
-import { DUMMY_EC_HOT_WATER_SYSTEMS } from "@/constants/dummy-ec-hot-water-systems";
-import { DUMMY_EC_LIGHTING_SYSTEMS } from "@/constants/dummy-ec-lighting-system";
-import { DUMMY_EC_VENTILATION_SYSTEMS } from "@/constants/dummy-ec-ventilation-system";
 import { delay } from "@/lib/helpers";
 import { ActivityLogEntry } from "@/models/activity-log";
 import { User } from "@/models/auth";
 import { Building } from "@/models/building";
 import { BuildingType } from "@/models/building-type";
 import { ClimateType } from "@/models/climate-type";
+import { BasePaginatedResponse } from "@/models/common";
 import { CoolingSystemFactor } from "@/models/cooling-system";
 import { CountrySetting } from "@/models/country-setting";
+import { DataManagementExportRow, DataManagementImportRow, DataManagementSummary } from "@/models/data-management";
 import { EPD } from "@/models/epd";
 import { FuelEmissionFactor } from "@/models/fuel-emission-factor";
 import { GridEmissionFactor } from "@/models/grid-emission-factor";
@@ -29,7 +32,7 @@ import { UserListItem } from "@/models/user";
 import { VentilationSystemFactor } from "@/models/ventilation-system";
 import { EpdLibrarySearch } from "@/screens/add-building/epd-library-schema";
 import { OperationalDataEntrySearchSchema } from "@/screens/add-building/operational-data-entry/schema";
-import { OperationalDataEntry, Material } from "@/screens/add-building/schema";
+import { OperationalDataEntry } from "@/screens/add-building/schema";
 import { isAfter, subDays, subHours } from "date-fns";
 
 type BasePaginatedTable = {
@@ -717,6 +720,92 @@ class ApiService {
 
     return {
       data: paginatedLogs,
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+
+  async getDataManagementSummary(): Promise<DataManagementSummary | null> {
+    await delay(1000);
+    return {
+      totalImports: {
+        value: 156,
+        description: "Last 30 days",
+        note: "+12%",
+      },
+      recordsProcessed: {
+        value: 48200,
+        description: "This quarter",
+        note: "+8.4%",
+      },
+      failedImports: {
+        value: 3,
+        description: "Failed imports",
+        note: "2 new",
+      },
+      exportGenerated: {
+        value: 42,
+        description: "Last 30 days",
+        note: "+5%",
+      },
+    }
+  }
+
+  async getDataManagementImports(params: BasePaginatedTable & {
+    status?: string;
+    dataType?: string;
+  }): Promise<BasePaginatedResponse<DataManagementImportRow> | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_DATA_MANAGEMENT_IMPORTS];
+
+    if (params.search) {
+      filteredData = filteredData.filter((item) =>
+        item.fileName.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+
+    if (params.status && params.status !== "All") {
+      filteredData = filteredData.filter((item) => item.status === params.status);
+    }
+
+    if (params.dataType && params.dataType !== "All") {
+      filteredData = filteredData.filter((item) => item.dataType === params.dataType);
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData,
+      currentPage: params.currentPage,
+      totalItems,
+    };
+  }
+
+  async getDataManagementExports(params: BasePaginatedTable): Promise<BasePaginatedResponse<DataManagementExportRow> | null> {
+    await delay(1000);
+    let filteredData = [...DUMMY_DATA_MANAGEMENT_EXPORTS];
+
+    if (params.search) {
+      filteredData = filteredData.filter((item) =>
+        item.exportName.toLowerCase().includes(params.search!.toLowerCase())
+      );
+    }
+
+    const totalItems = filteredData.length;
+    const startIndex = (params.currentPage - 1) * params.pageSize;
+    const paginatedData = filteredData.slice(
+      startIndex,
+      startIndex + params.pageSize
+    );
+
+    return {
+      data: paginatedData,
       currentPage: params.currentPage,
       totalItems,
     };
