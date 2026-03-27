@@ -42,7 +42,7 @@ export const sidebarItems: {
   },
   {
     label: "Data Management",
-    href: "#",
+    href: "/data-management",
     icon: "database-2-fill",
   },
   {

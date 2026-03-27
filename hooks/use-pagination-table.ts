@@ -1,13 +1,14 @@
 "use client"
 
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
-import useDebounce from './use-debounce'
+import { BasePaginatedResponse, BasePaginatedTable } from '@/models/common';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import useDebounce from './use-debounce';
 
 interface Props<T> {
   queryKey: string;
   pageSize?: number;
-  queryFn: (params: {search: string, currentPage: number, pageSize: number}) => Promise<{data: T[], currentPage: number, totalItems: number} | null>;
+  queryFn: (params: BasePaginatedTable) => Promise<BasePaginatedResponse<T> | null>;
 }
 
 export const usePaginationTable = <T>({queryKey, queryFn, pageSize = 10}: Props<T>) => {
