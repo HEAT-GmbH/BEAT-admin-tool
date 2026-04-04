@@ -1,7 +1,8 @@
+import { cn } from "@/lib/utils";
 import { IconName } from "@/models/icons";
 import { InputHTMLAttributes, RefObject } from "react";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 import { Icon } from "./icon";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "./ui/input-group";
 
 interface Props extends InputHTMLAttributes<HTMLInputElement> {
   startIcon?: IconName;
@@ -18,7 +19,7 @@ export const InputWithIcon = ({
   ...props
 }: Props) => {
   return (
-    <InputGroup className={`h-10 overflow-hidden ${groupClassName}`}>
+    <InputGroup className={cn("h-10 overflow-hidden", groupClassName)}>
       {!!startIcon && (
         <InputGroupAddon>
           <Icon name={startIcon} color="var(--icon--soft-400)" />
