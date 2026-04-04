@@ -1,7 +1,6 @@
 "use client";
 
 import { Icon } from "@/components/icon";
-import { ImportDialog } from "@/components/import-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +21,13 @@ import {
   Zap,
 } from "lucide-react";
 import { useState } from "react";
+import { ImportDialog } from "../buildings/import-dialog";
 
 export const NewImport = () => {
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
-
+  const organisationId = "org_123"; // This would come from context or props in a real app
+  
   const items: {
     label: string;
     icon: LucideIcon;
@@ -155,7 +156,7 @@ export const NewImport = () => {
         </DialogContent>
       </Dialog>
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <ImportDialog onOpenChange={setImportOpen} onSuccess={() => {}} />
+        <ImportDialog organisationId={organisationId} onOpenChange={setImportOpen} onSuccess={() => {}} />
       </Dialog>
     </>
   );
