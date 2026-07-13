@@ -342,6 +342,13 @@ class ApiService {
     return toPageResult(await apiFetch<DjangoPaginated<BuildingType>>(`/api/system-settings/building-types?${q}`));
   }
 
+  async getApartmentTypes(buildingTypeId: string): Promise<{ id: string; name: string }[]> {
+    const res = await apiFetch<{ results: { id: string; name: string }[] }>(
+      `/api/system-settings/apartment-types?building_type_id=${buildingTypeId}`
+    );
+    return res?.results ?? [];
+  }
+
   async createClimateType(data: { name: string; description: string }): Promise<ClimateType> {
     return apiFetch("/api/system-settings/climate-types", { method: "POST", body: JSON.stringify(data) });
   }

@@ -61,7 +61,7 @@ function RowActions({ building }: { building: Building }) {
             <Eye className="h-4 w-4" />
             View
           </DropdownMenuItem>
-          <DropdownMenuItem className="gap-2" onClick={() => router.push(`/buildings/${building.id}/edit`)}>
+          <DropdownMenuItem className="gap-2" onClick={() => router.push(`/buildings/${building.uuid}/edit`)}>
             <Pencil className="h-4 w-4" />
             Edit
           </DropdownMenuItem>

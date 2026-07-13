@@ -9,7 +9,6 @@ import {
 } from "react";
 import { Upload } from "./upload";
 import { MapFields } from "./map-fields";
-import { Validate } from "./validate";
 import { Preview } from "./preview";
 import { Process } from "./process";
 
@@ -20,20 +19,14 @@ export const steps: {
   nextLabel?: string;
 }[] = [
   { id: "upload", label: "Upload", component: Upload },
-  { id: "map-fields", label: "Review", component: MapFields },
-  {
-    id: "validate",
-    label: "Import",
-    component: Validate,
-    nextLabel: "Process and import",
-  },
+  { id: "map-fields", label: "Map Fields", component: MapFields },
   {
     id: "preview",
-    label: "Progress",
+    label: "Preview & Confirm",
     component: Preview,
-    nextLabel: "Confirm & Continue",
+    nextLabel: "Confirm & Import",
   },
-  { id: "process", label: "Complete", component: Process },
+  { id: "process", label: "Process", component: Process },
 ];
 
 export interface ImportColumn {

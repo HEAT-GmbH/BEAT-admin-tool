@@ -7,7 +7,7 @@ import { useAddBuilding } from "./context";
 import { STEPS } from "./step-lists";
 
 export const AddBuildingSteps = () => {
-  const { activeMainStep, activeSubStep, completed, startTransition } =
+  const { activeMainStep, activeSubStep, completed, startTransition, buildingUuid } =
     useAddBuilding();
 
   return (
@@ -41,7 +41,7 @@ export const AddBuildingSteps = () => {
           </div>
           <div>
             <Link
-              href={`/add-building${step.steps?.length ? step.path + step.steps[0].path : step.path}`}
+              href={`/add-building${step.steps?.length ? step.path + step.steps[0].path : step.path}${buildingUuid ? `?uuid=${buildingUuid}` : ""}`}
               onClick={() => startTransition(() => {})}
               className={cn(
                 !step.steps && index !== STEPS.length - 1 && "pb-5.25",
@@ -62,7 +62,7 @@ export const AddBuildingSteps = () => {
               {step.steps?.map((subStep, index) => (
                 <Link
                   key={subStep.id}
-                  href={`/add-building${step.path + subStep.path}`}
+                  href={`/add-building${step.path + subStep.path}${buildingUuid ? `?uuid=${buildingUuid}` : ""}`}
                   onClick={() => startTransition(() => {})}
                   className={cn(index === step.steps!.length - 1 && "pb-5.25")}
                 >

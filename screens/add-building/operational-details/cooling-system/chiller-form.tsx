@@ -5,183 +5,293 @@ import { FormEndLabel } from "@/components/form-addons";
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
 import { YesNoRadio } from "@/components/yes-no-radio";
-import { numberOfStarsOptions } from "@/constants/select-options";
-import {
-  ChillerSystem,
-  chillerSystemSchema,
-} from "@/screens/add-building/schema";
-import { Control } from "react-hook-form";
+import { ChillerSystem, chillerSystemSchema } from "@/screens/add-building/schema";
+import { useQuery } from "@tanstack/react-query";
+import { Control, useWatch } from "react-hook-form";
 
 type ChillerFormProps = {
   control: Control<ChillerSystem>;
 };
 
+const CHILLER_TYPE_ITEMS = [
+  { value: "water-cooled", item: "Water cooled chiller" },
+  { value: "air-cooled", item: "Air cooled chiller" },
+];
+
+const ENERGY_LABEL_ITEMS = [
+  { value: "A", item: "A" },
+  { value: "B", item: "B" },
+  { value: "C", item: "C" },
+  { value: "D", item: "D" },
+  { value: "E", item: "E" },
+  { value: "F", item: "F" },
+  { value: "G", item: "G" },
+];
+
+const STARS_ITEMS = ["1", "2", "3", "4", "5"].map((v) => ({ value: v, item: v }));
+
 export function ChillerForm({ control }: ChillerFormProps) {
+  const [
+    totalCoolingLoad,
+    numberOfChillers,
+    baselineCoolingEfficiency,
+    hours,
+    days,
+    weeks,
+    vsd,
+    hr,
+  ] = useWatch({
+    control,
+    name: [
+      "totalCoolingLoad",
+      "numberOfChillers",
+      "baselineCoolingEfficiency",
+      "operatingSchedule.hours",
+      "operatingSchedule.days",
+      "operatingSchedule.weeks",
+      "installationOfVariableSpeedDrives",
+      "installationOfHeatRecoverySystems",
+    ],
+  });
+
+  const autoEnergy = (() => {
+    const load = Number(totalCoolingLoad) || 0;
+    const units = Number(numberOfChillers) || 0;
+    const eff = Number(baselineCoolingEfficiency) || 0;
+    const h = Number(hours) || 0;
+    const d = Number(days) || 0;
+    const w = Number(weeks) || 0;
+    if (!load || !units || !eff || !h || !d || !w) return "";
+    const vsdFactor = vsd ? 0.80 : 1.00;
+    const hrFactor = hr ? 0.70 : 1.00;
+    return (load * units * eff * h * d * w * vsdFactor * hrFactor).toFixed(3);
+  })();
+
+  const { data: refrigerantData } = useQuery({
+    queryKey: ["select-lists", "refrigerant_types"],
+    queryFn: async () => {
+      const res = await fetch("/api/system-settings/select-lists?type=refrigerant_types");
+      if (!res.ok) throw new Error("Failed to fetch refrigerant types");
+      return res.json();
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const refrigerantItems = (refrigerantData?.results ?? []).map(
+    (r: { id: string; name: string }) => ({ value: r.id, item: r.name })
+  );
+
   return (
     <div className="space-y-4 pt-4">
-      <DialogDivider>Chiller System Data</DialogDivider>
+      <DialogDivider>Water / Air Cooled Chiller Data</DialogDivider>
       <div className="grid grid-cols-2 gap-4">
         <FormSelect
           control={control}
-          name="data.type"
+          name="chillerType"
           schema={chillerSystemSchema}
           id="chiller-type"
           label="Chiller system"
           placeholder="Select an option"
-          items={[
-            { value: "water-cooled", item: "Water cooled chiller" },
-            { value: "air-cooled", item: "Air cooled chiller" },
-          ]}
+          items={CHILLER_TYPE_ITEMS}
+          fieldRequired
         />
         <FormInput
           control={control}
-          name="data.yearOfInstallation"
+          name="yearOfInstallation"
           schema={chillerSystemSchema}
-          id="year-intallation"
+          id="chiller-year"
           label="Year of installation"
-          placeholder="eg. 2012"
+          placeholder="e.g. 2019"
+          type="number"
+          fieldRequired
         />
         <FormSelect
           control={control}
-          name="data.refrigerantType"
+          name="refrigerantType"
           schema={chillerSystemSchema}
-          id="refrigerant-type"
+          id="chiller-refrigerant"
           label="Type of refrigerants"
           placeholder="Select an option"
-          items={[
-            { value: "R-134A", item: "R-134A" },
-            { value: "R-32", item: "R-32" },
-            { value: "R-410A", item: "R-410A" },
-            { value: "R-290", item: "R-290 (Propane)" },
-          ]}
+          items={refrigerantItems}
+          fieldRequired
         />
         <FormInput
           control={control}
-          name="data.refrigerantQuantity"
+          name="refrigerantQuantity"
           schema={chillerSystemSchema}
-          id="refrigerant-qty"
+          id="chiller-refrigerant-qty"
           label="Refrigerant quantity"
-          placeholder="eg. 134"
+          placeholder="e.g. 200 – 2000 kg"
           type="number"
-          endAddon={<span className="text-sm text-gray-500">kg</span>}
+          endAddon={<FormEndLabel label="kg" />}
+          fieldRequired
         />
+        <FormInput
+          control={control}
+          name="totalCoolingLoad"
+          schema={chillerSystemSchema}
+          id="chiller-cooling-load"
+          label="Total cooling load"
+          placeholder="e.g. 500"
+          type="number"
+          endAddon={<FormEndLabel label="RT" />}
+          fieldRequired
+        />
+        <FormInput
+          control={control}
+          name="numberOfChillers"
+          schema={chillerSystemSchema}
+          id="chiller-number"
+          label="Number of units"
+          placeholder="e.g. 2"
+          type="number"
+          fieldRequired
+        />
+        <FormInput
+          control={control}
+          name="baselineLeakageFactor"
+          schema={chillerSystemSchema}
+          id="chiller-leakage"
+          label="Baseline leakage factor"
+          placeholder="2 (new) or 10 (old)"
+          type="number"
+          endAddon={<FormEndLabel label="%" />}
+          fieldRequired
+        />
+        <div className="col-span-2">
+          <FormInput
+            control={control}
+            name="baselineCoolingEfficiency"
+            schema={chillerSystemSchema}
+            id="chiller-efficiency"
+            label="Baseline cooling efficiency"
+            placeholder="e.g. 0.70"
+            type="number"
+            endAddon={<FormEndLabel label="kW/RT" />}
+            fieldRequired
+          />
+        </div>
+
+        {/* Annual operating schedule */}
+        <div className="col-span-2 space-y-1">
+          <p className="label-small text-foreground flex items-center gap-0.5">
+            Annual operating schedule<span className="text-error">*</span>
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <FormInput
+              control={control}
+              name="operatingSchedule.hours"
+              schema={chillerSystemSchema}
+              id="chiller-hours"
+              placeholder="e.g. 12"
+              type="number"
+              endAddon={<FormEndLabel label="Hours / day" />}
+            />
+            <FormInput
+              control={control}
+              name="operatingSchedule.days"
+              schema={chillerSystemSchema}
+              id="chiller-days"
+              placeholder="e.g. 7"
+              type="number"
+              endAddon={<FormEndLabel label="Days / week" />}
+            />
+            <FormInput
+              control={control}
+              name="operatingSchedule.weeks"
+              schema={chillerSystemSchema}
+              id="chiller-weeks"
+              placeholder="e.g. 52"
+              type="number"
+              endAddon={<FormEndLabel label="Weeks / year" />}
+            />
+          </div>
+        </div>
+
         <YesNoRadio
           control={control}
-          name="data.installationOfVariableSpeedDrives"
+          name="installationOfVariableSpeedDrives"
           schema={chillerSystemSchema}
-          id="installation-of-variable-speed-drives"
+          id="chiller-vsd"
           label="Installation of variable speed drives"
         />
         <YesNoRadio
           control={control}
-          name="data.installationOfHeatRecoverySystems"
+          name="installationOfHeatRecoverySystems"
           schema={chillerSystemSchema}
-          id="installation-of-heat-recovery-systems"
+          id="chiller-hr"
           label="Installation of heat recovery systems"
         />
-        <FormInput
-          control={control}
-          name="data.totalCoolingLoad"
-          schema={chillerSystemSchema}
-          id="total-cooling-load"
-          label="Total cooling load"
-          placeholder="eg. 342"
-          type="number"
-        />
-        <FormInput
-          control={control}
-          name="data.baselineCoolingEfficiency"
-          schema={chillerSystemSchema}
-          id="baseline-cooling-efficiency"
-          label="Baseline Cooling Efficiency"
-          placeholder="eg. 2"
-          type="number"
-        />
       </div>
+
       <DialogAccordion>
         <div className="grid grid-cols-2 gap-4">
-          <FormInput
-            control={control}
-            name="otherDetails.numberOfChillers"
-            schema={chillerSystemSchema}
-            id="number-of-chillers"
-            label="Number of chillers (Optional)"
-            placeholder="eg. 2"
-            type="number"
-          />
-          <FormInput
-            control={control}
-            name="otherDetails.totalChillerSystemPowerInput"
-            schema={chillerSystemSchema}
-            id="total-chiller-system-power-input"
-            label="Total chiller system power input"
-            placeholder="eg.2000"
-            type="number"
-            endAddon={<span className="text-sm text-gray-500">kwH</span>}
-          />
           <div className="col-span-2">
             <FormInput
               control={control}
-              name="otherDetails.waterCooledChillerCoolingLoadFactor"
+              name="iplv"
               schema={chillerSystemSchema}
-              id="water-cooled-chiller-cooling-load-factor"
-              label="Water-cooled chiller cooling load factor (Optional) %"
-              placeholder="45"
+              id="chiller-iplv"
+              label="IPLV (Integrated Part Load Value) — Optional"
+              placeholder="e.g. 6.0"
               type="number"
-              endAddon={<span className="text-sm text-gray-500">%</span>}
+            />
+          </div>
+          <div className="col-span-2">
+            <FormInput
+              control={control}
+              name="waterCooledChillerCoolingLoadFactor"
+              schema={chillerSystemSchema}
+              id="chiller-wcclf"
+              label="Water-cooled chiller cooling load factor — Optional (%)"
+              placeholder="e.g. 15"
+              type="number"
+              endAddon={<FormEndLabel label="%" />}
             />
           </div>
           <FormInput
             control={control}
-            name="otherDetails.cop"
+            name="totalChillerSystemPowerInput"
             schema={chillerSystemSchema}
-            id="chiller-cop"
-            label="COP"
-            placeholder="eg. 2"
+            id="chiller-power-input"
+            label="Total system power input — Optional"
+            placeholder="e.g. 2000"
             type="number"
+            endAddon={<FormEndLabel label="kW" />}
           />
           <FormInput
             control={control}
-            name="otherDetails.iplv"
+            name="cop"
             schema={chillerSystemSchema}
-            id="chiller-iplv"
-            label="IPLV"
-            placeholder="eg. 2"
+            id="chiller-cop"
+            label="COP — Optional"
+            placeholder="e.g. 5.5"
             type="number"
           />
           <FormSelect
             control={control}
-            name="otherDetails.energyEfficiencyLabel"
+            name="energyEfficiencyLabel"
             schema={chillerSystemSchema}
-            id="chiller-efficiency-label"
-            label="Energy efficiency label"
-            placeholder="Select efficiency label"
-            items={[
-              { value: "bee", item: "BEE Star Rating" },
-              { value: "egat", item: "EGAT" },
-              { value: "nea", item: "NEA Tick Rating" },
-            ]}
+            id="chiller-eel"
+            label="Energy efficiency label — Optional (A–G)"
+            placeholder="Select"
+            items={ENERGY_LABEL_ITEMS}
           />
           <FormSelect
             control={control}
-            name="otherDetails.numberOfStars"
+            name="numberOfStars"
             schema={chillerSystemSchema}
             id="chiller-stars"
-            label="Number of stars"
-            placeholder="Select an option"
-            items={numberOfStarsOptions}
+            label="Number of stars — Optional (1–5)"
+            placeholder="Select"
+            items={STARS_ITEMS}
           />
-          <div className="col-span-2">
-            <FormInput
-              control={control}
-              name="otherDetails.totalEnergyConsumptionAnnually"
-              schema={chillerSystemSchema}
-              id="total-energy-consumption-annually"
-              label="Total energy consumption of chiller system annually (kwh/year)"
-              placeholder="eg. 200"
-              type="number"
-              endAddon={<FormEndLabel label="kwh/year" />}
-            />
+          <div className="col-span-2 space-y-1">
+            <p className="label-small text-(--text--strong-950)">Total energy consumption annually — Auto-calculated</p>
+            <div className="h-10 px-3 flex items-center justify-between rounded-md border border-input bg-(--bg--weak-50) text-sm text-(--text--sub-600) cursor-not-allowed">
+              <span>{autoEnergy || "Auto-calculated"}</span>
+              <span className="text-xs">kWh/year</span>
+            </div>
           </div>
         </div>
       </DialogAccordion>

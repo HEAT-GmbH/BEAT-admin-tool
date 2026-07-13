@@ -1,7 +1,7 @@
 "use client";
 
 import FormInput from "@/components/form-input";
-import FormSelect from "@/components/form-select";
+import FormRadioGroup from "@/components/form-radio-group";
 import { Icon } from "@/components/icon";
 import { useFormContext } from "react-hook-form";
 import { schema } from "../schema";
@@ -130,23 +130,23 @@ export function OperationalScheduleTemperatureScreen() {
         schema={schema}
         id="renewable-energy-percent"
         label="Renewable energy installation (%)"
-        placeholder="eg. 10"
+        placeholder="eg. 15"
         type="number"
+        fieldRequired
         endAddon={
           <span className="text-(--text--soft-400) text-sm font-normal">%</span>
         }
       />
 
-      <FormSelect
+      <FormRadioGroup
         control={control}
         name="operationalDetails.operationalScheduleTemperature.buildingSmartSystem"
         schema={schema}
         id="building-smart-system"
         label="Building smart system installation"
-        placeholder="Select"
         items={[
-          { item: "Yes", value: "yes" },
-          { item: "No", value: "no" },
+          { label: "Yes", value: "yes" },
+          { label: "No", value: "no" },
         ]}
       />
     </div>

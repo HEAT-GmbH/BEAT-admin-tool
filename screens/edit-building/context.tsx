@@ -1,6 +1,6 @@
 "use client";
 import { AddBuildingStepConfig } from "@/models/building";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
@@ -10,11 +10,12 @@ import {
   useEffect,
   useEffectEvent,
   useTransition,
-  useState,
+  useRef,
 } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { schema, type AddBuildingForm } from "@/screens/add-building/schema";
 import { STEPS } from "@/screens/add-building/step-lists";
+import { toast } from "sonner";
 
 interface EditBuildingContext {
   stepBadge: { current: number; total: number } | null;
@@ -32,9 +33,12 @@ interface EditBuildingContext {
   isPending: boolean;
   startTransition: TransitionStartFunction;
   buildingUuid: string;
+  setCertFile: (file: File | null) => void;
+  setBoqFiles: (files: File[]) => void;
+  setSubtypesAvailable: (v: boolean) => void;
 }
 
-const EditBuildingContext = createContext<EditBuildingContext | undefined>(undefined);
+export const EditBuildingContext = createContext<EditBuildingContext | undefined>(undefined);
 
 export const EditBuildingProvider = ({
   children,
@@ -52,10 +56,79 @@ export const EditBuildingProvider = ({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const { handleSubmit, control, getValues, ...methods } = useForm<AddBuildingForm>({
-    resolver: zodResolver(schema),
+  // File state for step 1-2 uploads
+  const certFileRef = useRef<File | null>(null);
+  const boqFilesRef = useRef<File[]>([]);
+  const setCertFile = (file: File | null) => { certFileRef.current = file; };
+  const setBoqFiles = (files: File[]) => { boqFilesRef.current = files; };
+
+  const subtypesAvailableRef = useRef(false);
+  const setSubtypesAvailable = (v: boolean) => { subtypesAvailableRef.current = v; };
+
+  const { handleSubmit, control, getValues, reset, ...methods } = useForm<AddBuildingForm>({
+    resolver: standardSchemaResolver(schema),
     mode: "onTouched",
   });
+
+  // Pre-populate form from detail API on mount
+  useEffect(() => {
+    const populate = async () => {
+      try {
+        const res = await fetch(`/api/buildings/${editBuildingId}/detail`);
+        if (!res.ok) return;
+        const d = await res.json();
+        const core = d.core ?? d;
+        const sched = d.schedule ?? {};
+        reset({
+          ...getValues(),
+          buildingInformation: {
+            buildingNameLocation: {
+              nameOrCode: core.name ?? "",
+              address: core.street ?? "",
+              country: String(core.country?.id ?? ""),
+              region: String(core.region?.id ?? ""),
+              city: String(core.city?.id ?? ""),
+              longitude: core.longitude != null ? String(core.longitude) : "",
+              latitude: core.latitude != null ? String(core.latitude) : "",
+            },
+            buildingDetails: {
+              buildingTypeId: String(core.category?.category_id ?? ""),
+              apartmentTypeId: core.category?.subcategory_id ? String(core.category.subcategory_id) : undefined,
+              climateTypeId: core.climate_zone?.name ?? "",
+              assessmentPeriod: core.reference_period ?? undefined,
+              constructionYear: core.construction_year ? String(core.construction_year) : undefined,
+              totalFloorArea: core.total_floor_area ? Number(core.total_floor_area) : undefined,
+              conditionedFloorArea: core.cond_floor_area ? Number(core.cond_floor_area) : undefined,
+              numberOfFloorsBelowGround: core.floors_below_ground ?? undefined,
+              hasCertification: core.has_certification ? "yes" : "no",
+              hasBOQ: core.has_boq ? "yes" : "no",
+            },
+          },
+          operationalDetails: {
+            ...getValues().operationalDetails,
+            operationalScheduleTemperature: {
+              numberOfResidents: sched.num_residents ?? undefined,
+              annualOperatingSchedule: {
+                hours: sched.hours_per_workday ?? undefined,
+                days: sched.workdays_per_week ?? undefined,
+                weeks: sched.weeks_per_year ?? undefined,
+              },
+              roomHeatingTemperature: sched.heating_temp ?? undefined,
+              heatingTemperatureUnit: sched.heating_temp_unit ?? "celsius",
+              roomCoolingTemperature: sched.cooling_temp ?? undefined,
+              coolingTemperatureUnit: sched.cooling_temp_unit ?? "celsius",
+              renewableEnergyPercent: sched.renewable_energy_percent ?? undefined,
+              buildingSmartSystem: sched.building_smart_system ? "yes" : "no",
+            },
+          },
+        });
+      } catch {
+        // silently ignore
+      }
+    };
+    populate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editBuildingId]);
 
   const goBack = () => {
     let path = basePath;
@@ -108,6 +181,27 @@ export const EditBuildingProvider = ({
     }
     startTransition(() => { router.push(path); });
   };
+
+  const getNextPath = (): string | null => {
+    let path = basePath;
+    if (activeSubStep && activeMainStep) {
+      if (activeSubStep.id < activeMainStep.steps!.length) {
+        path += activeMainStep.path + activeMainStep.steps?.[activeSubStep.id].path;
+      } else {
+        if (activeMainStep.id < STEPS.length + 1) {
+          path += STEPS[activeMainStep.id].path;
+        } else return null;
+      }
+    } else if (!activeSubStep && activeMainStep) {
+      if (activeMainStep.id < STEPS.length + 1) {
+        path += STEPS[activeMainStep.id].path;
+      } else return null;
+    }
+    return path;
+  };
+
+  const isStep = (mainId: number, subId?: number) =>
+    activeMainStep?.id === mainId && (subId === undefined || activeSubStep?.id === subId);
 
   const callStepApi = async (): Promise<boolean> => {
     if (!activeMainStep) return true;
@@ -173,7 +267,8 @@ export const EditBuildingProvider = ({
 
     const values = getValues();
 
-    if (activeMainStep.id === 1 && activeSubStep.id === 1) {
+    // Step 1.1 — Building Name & Location (blocking)
+    if (isStep(1, 1)) {
       const loc = values.buildingInformation?.buildingNameLocation;
       if (!loc) return true;
       try {
@@ -192,17 +287,28 @@ export const EditBuildingProvider = ({
           }),
         });
         if (!res.ok) {
-          console.error("[edit/name-location] failed:", res.status, await res.text().catch(() => ""));
+          const err = await res.json().catch(() => ({}));
+          toast.error(err?.detail ?? err?.building_name?.[0] ?? "Failed to save building location.");
+          return false;
         }
-      } catch (err) {
-        console.error("[edit/name-location] network error:", err);
+        toast.success("Building location saved.");
+        return true;
+      } catch {
+        toast.error("Network error. Please try again.");
+        return false;
       }
-      return true;
     }
 
-    if (activeMainStep.id === 1 && activeSubStep.id === 2) {
+    // Step 1.2 — Building Details (blocking)
+    if (isStep(1, 2)) {
       const details = values.buildingInformation?.buildingDetails;
       if (!details) return true;
+
+      if (subtypesAvailableRef.current && !details.apartmentTypeId) {
+        toast.error("Please select a type of apartments.");
+        return false;
+      }
+
       try {
         const res = await fetch("/api/buildings/add/details", {
           method: "POST",
@@ -222,15 +328,48 @@ export const EditBuildingProvider = ({
           }),
         });
         if (!res.ok) {
-          console.error("[edit/details] failed:", res.status, await res.text().catch(() => ""));
+          const err = await res.json().catch(() => ({}));
+          toast.error(err?.detail ?? "Failed to save building details.");
+          return false;
         }
-      } catch (err) {
-        console.error("[edit/details] network error:", err);
+        toast.success("Building details saved.");
+      } catch {
+        toast.error("Network error. Please try again.");
+        return false;
       }
+
+      // Upload cert/BoQ files if present
+      const certFile = certFileRef.current;
+      const boqFiles = boqFilesRef.current;
+      const hasCert = details.hasCertification === "yes";
+      const hasBoq = details.hasBOQ === "yes";
+
+      if (hasCert || hasBoq) {
+        const fd = new FormData();
+        fd.append("building_uuid", editBuildingId);
+        fd.append("has_certification", hasCert ? "yes" : "no");
+        fd.append("has_boq", hasBoq ? "yes" : "no");
+        if (hasCert && certFile) fd.append("certification_file", certFile);
+        if (hasBoq) boqFiles.forEach((f) => fd.append("boq_files", f));
+
+        try {
+          const fileRes = await fetch("/api/buildings/files", {
+            method: "POST",
+            body: fd,
+          });
+          if (!fileRes.ok) {
+            const err = await fileRes.json().catch(() => ({}));
+            toast.error(err?.error ?? "Failed to upload files.");
+          }
+        } catch {
+          toast.error("File upload failed. You can re-upload later.");
+        }
+      }
+
       return true;
     }
 
-    if (activeMainStep.id === 2 && activeSubStep.id === 1) {
+    if (isStep(2, 1)) {
       const sched = values.operationalDetails?.operationalScheduleTemperature;
       if (!sched) return true;
       try {
@@ -257,7 +396,7 @@ export const EditBuildingProvider = ({
       return true;
     }
 
-    if (activeMainStep.id === 2 && activeSubStep.id === 2) {
+    if (isStep(2, 2)) {
       const systems = values.operationalDetails?.coolingSystem ?? [];
       for (const system of systems) {
         if (system.id) continue;
@@ -287,7 +426,7 @@ export const EditBuildingProvider = ({
       return true;
     }
 
-    if (activeMainStep.id === 2 && activeSubStep.id === 3) {
+    if (isStep(2, 3)) {
       const systems = values.operationalDetails?.ventilationSystem ?? [];
       for (const system of systems) {
         if (system.id) continue;
@@ -317,7 +456,7 @@ export const EditBuildingProvider = ({
       return true;
     }
 
-    if (activeMainStep.id === 2 && activeSubStep.id === 4) {
+    if (isStep(2, 4)) {
       const systems = values.operationalDetails?.lightingSystem ?? [];
       for (const system of systems) {
         if (system.id) continue;
@@ -349,7 +488,7 @@ export const EditBuildingProvider = ({
       return true;
     }
 
-    if (activeMainStep.id === 2 && activeSubStep.id === 5) {
+    if (isStep(2, 5)) {
       const systems = values.operationalDetails?.liftEscalatorSystem ?? [];
       const first = systems[0];
       if (!first || first.id) return true;
@@ -371,7 +510,7 @@ export const EditBuildingProvider = ({
       return true;
     }
 
-    if (activeMainStep.id === 2 && activeSubStep.id === 6) {
+    if (isStep(2, 6)) {
       const systems = values.operationalDetails?.hotWaterSystem ?? [];
       for (const system of systems) {
         if (system.id) continue;
@@ -407,33 +546,30 @@ export const EditBuildingProvider = ({
   };
 
   const next = () => {
-    let path = basePath;
-    if (activeSubStep && activeMainStep) {
-      if (activeSubStep.id < activeMainStep.steps!.length) {
-        path += activeMainStep.path + activeMainStep.steps?.[activeSubStep.id].path;
-      } else {
-        if (activeMainStep.id < STEPS.length + 1) {
-          path += STEPS[activeMainStep.id].path;
-        } else {
-          handleSubmit(onSubmit)();
-          return;
-        }
-      }
+    const nextPath = getNextPath();
+    if (!nextPath) {
+      handleSubmit(onSubmit)();
+      return;
     }
-    if (!activeSubStep && activeMainStep) {
-      if (activeMainStep.id < STEPS.length + 1) {
-        path += STEPS[activeMainStep.id].path;
-      } else {
-        handleSubmit(onSubmit)();
-        return;
-      }
+
+    // Steps 1-1 and 1-2 are blocking
+    if (isStep(1, 1) || isStep(1, 2)) {
+      callStepApi().then((ok) => {
+        if (!ok) return;
+        startTransition(() => { router.push(nextPath); });
+      });
+      return;
     }
+
     callStepApi().finally(() => {
-      startTransition(() => { router.push(path); });
+      startTransition(() => { router.push(nextPath); });
     });
   };
 
   const canSkip = (): boolean => {
+    // Steps 1-1 and 1-2 cannot be skipped
+    if (isStep(1, 1) || isStep(1, 2)) return false;
+
     if (activeSubStep) {
       return activeSubStep.id < activeMainStep!.steps!.length + 1;
     } else if (activeMainStep && !activeSubStep) {
@@ -516,9 +652,12 @@ export const EditBuildingProvider = ({
         isPending,
         startTransition,
         buildingUuid: editBuildingId,
+        setCertFile,
+        setBoqFiles,
+        setSubtypesAvailable,
       }}
     >
-      <FormProvider handleSubmit={handleSubmit} control={control} getValues={getValues} {...methods}>
+      <FormProvider handleSubmit={handleSubmit} control={control} getValues={getValues} reset={reset} {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="w-full">
           {children}
         </form>

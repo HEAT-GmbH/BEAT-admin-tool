@@ -1,7 +1,6 @@
 "use client";
 
 import { EmptySystemState } from "@/components/empty-system-state";
-import FormSelect from "@/components/form-select";
 import { SystemWithItems } from "@/components/system-with-items";
 import {
   AddBuildingForm,
@@ -10,9 +9,9 @@ import {
   airConditionSystemSchema,
   chillerSystemSchema,
 } from "@/screens/add-building/schema";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useState } from "react";
 import {
-  Control,
   useFieldArray,
   useForm,
   useFormContext,
@@ -20,6 +19,25 @@ import {
 import { OperationalItemDialog } from "../components/operational-item-dialog";
 import { AirConditionForm } from "./air-condition-form";
 import { ChillerForm } from "./chiller-form";
+
+type CoolingSystemType = "chiller" | "air-condition";
+
+const COOLING_TYPE_ITEMS = [
+  { value: "chiller", item: "Chiller System (Water / Air cooled)" },
+  { value: "air-condition", item: "Air Conditioner (Window / Split / VRF / Packaged)" },
+];
+
+const CHILLER_LABEL_MAP: Record<string, string> = {
+  "water-cooled": "Water Cooled Chiller",
+  "air-cooled": "Air Cooled Chiller",
+};
+
+const AC_LABEL_MAP: Record<string, string> = {
+  window: "Window AC",
+  split: "Split AC",
+  vrv: "VRF System",
+  packaged: "Packaged / Ductable AC",
+};
 
 export function CoolingSystemScreen() {
   const { control } = useFormContext<AddBuildingForm>();
@@ -30,53 +48,80 @@ export function CoolingSystemScreen() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [selectedType, setSelectedType] = useState<CoolingSystemType>("chiller");
 
-  // Local form for the dialog
-  const {
-    control: dialogControl,
-    handleSubmit: handleDialogSubmit,
-    reset: resetDialog,
-    watch: watchDialog,
-  } = useForm<ChillerSystem | AirConditionSystem>({
-    defaultValues: {
-      type: "chiller",
-    },
+  const chillerForm = useForm<ChillerSystem>({
+    resolver: standardSchemaResolver(chillerSystemSchema),
+    defaultValues: { type: "chiller", installationOfVariableSpeedDrives: false, installationOfHeatRecoverySystems: false },
   });
 
-  const watchedType = watchDialog("type");
+  const acForm = useForm<AirConditionSystem>({
+    resolver: standardSchemaResolver(airConditionSystemSchema),
+    defaultValues: { type: "air-condition", coolingCapacityUnit: "ton" },
+  });
 
   const handleAddNew = () => {
     setEditingIndex(null);
-    resetDialog({
-      type: "chiller",
-      data: {
-        type: "",
-        yearOfInstallation: "",
-        refrigerantType: "",
-        refrigerantQuantity: 0,
-        totalCoolingLoad: 0,
-        baselineCoolingEfficiency: 0,
-        baselineLeakageFactor: 0,
-        installationOfHeatRecoverySystems: false,
-        installationOfVariableSpeedDrives: false,
-      },
-    }); // Reset to default values
+    setSelectedType("chiller");
+    chillerForm.reset({ type: "chiller", installationOfVariableSpeedDrives: false, installationOfHeatRecoverySystems: false });
+    acForm.reset({ type: "air-condition", coolingCapacityUnit: "ton" });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (index: number) => {
     setEditingIndex(index);
-    resetDialog(fields[index]);
+    const field = fields[index];
+    if (field.type === "chiller") {
+      setSelectedType("chiller");
+      chillerForm.reset(field as ChillerSystem);
+    } else {
+      setSelectedType("air-condition");
+      acForm.reset(field as AirConditionSystem);
+    }
     setIsDialogOpen(true);
   };
 
-  const onSave = (data: ChillerSystem | AirConditionSystem) => {
+  const onSaveChiller = (data: ChillerSystem) => {
     if (editingIndex !== null) {
       update(editingIndex, data);
     } else {
       append(data);
     }
     setIsDialogOpen(false);
+  };
+
+  const onSaveAC = (data: AirConditionSystem) => {
+    if (editingIndex !== null) {
+      update(editingIndex, data);
+    } else {
+      append(data);
+    }
+    setIsDialogOpen(false);
+  };
+
+  const handleSave = () => {
+    if (selectedType === "chiller") {
+      chillerForm.handleSubmit(onSaveChiller)();
+    } else {
+      acForm.handleSubmit(onSaveAC)();
+    }
+  };
+
+  const getFieldLabel = (field: ChillerSystem | AirConditionSystem) => {
+    if (field.type === "chiller") {
+      return CHILLER_LABEL_MAP[(field as ChillerSystem).chillerType] ?? "Chiller";
+    }
+    const ac = field as AirConditionSystem;
+    return AC_LABEL_MAP[ac.acType] ?? "Air Conditioner";
+  };
+
+  const getFieldDescription = (field: ChillerSystem | AirConditionSystem) => {
+    if (field.type === "chiller") {
+      const c = field as ChillerSystem;
+      return [`Refrigerant: ${c.refrigerantType}`, `Qty: ${c.refrigerantQuantity} kg`];
+    }
+    const ac = field as AirConditionSystem;
+    return [`Refrigerant: ${ac.refrigerantType}`, `Qty: ${ac.refrigerantQuantity} kg`];
   };
 
   return (
@@ -95,16 +140,11 @@ export function CoolingSystemScreen() {
         <SystemWithItems
           ctaLabel="Add a cooling system"
           handleAddNew={handleAddNew}
-          fields={fields.map((field, index) => {
-            return {
-              id: field.id ?? index.toString(),
-              title: field.data.type,
-              description: [
-                `Type: ${field.data.refrigerantType}`,
-                `Refrigerant quantity: ${field.data.refrigerantQuantity}`,
-              ],
-            };
-          })}
+          fields={fields.map((field, index) => ({
+            id: field.id ?? index.toString(),
+            title: getFieldLabel(field),
+            description: getFieldDescription(field),
+          }))}
           handleEdit={handleEdit}
           remove={remove}
           fieldIcon="snowflake-fill"
@@ -113,39 +153,35 @@ export function CoolingSystemScreen() {
       )}
 
       <OperationalItemDialog
-        title={
-          editingIndex !== null ? "Edit cooling system" : "Add a cooling system"
-        }
-        description="Enter details of the building’s cooling system, including type and capacity"
+        title={editingIndex !== null ? "Edit cooling system" : "Add a cooling system"}
+        description="Enter details of the building's cooling system, including type and capacity"
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        onSave={handleDialogSubmit(onSave)}
+        onSave={handleSave}
       >
-        <FormSelect
-          control={dialogControl}
-          name="type"
-          schema={
-            watchedType === "chiller"
-              ? chillerSystemSchema
-              : airConditionSystemSchema
-          }
-          id="cooling-system-type"
-          label="Type of cooling system"
-          placeholder="Select a cooling system"
-          items={[
-            { value: "chiller", item: "Chiller Systems" },
-            { value: "air-condition", item: "Air condition system" },
-          ]}
-        />
+        {/* Top-level type selector */}
+        <div className="pb-2 space-y-1">
+          <label htmlFor="cooling-system-top-type" className="label-small text-(--text--strong-950)">
+            Type of cooling system<span className="text-destructive ml-0.5">*</span>
+          </label>
+          <select
+            id="cooling-system-top-type"
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value as CoolingSystemType)}
+            className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+          >
+            {COOLING_TYPE_ITEMS.map((item) => (
+              <option key={item.value} value={item.value}>{item.item}</option>
+            ))}
+          </select>
+        </div>
 
-        {watchedType === "chiller" && (
-          <ChillerForm control={dialogControl as Control<ChillerSystem>} />
+        {selectedType === "chiller" && (
+          <ChillerForm control={chillerForm.control} />
         )}
 
-        {watchedType === "air-condition" && (
-          <AirConditionForm
-            control={dialogControl as Control<AirConditionSystem>}
-          />
+        {selectedType === "air-condition" && (
+          <AirConditionForm control={acForm.control} />
         )}
       </OperationalItemDialog>
     </div>

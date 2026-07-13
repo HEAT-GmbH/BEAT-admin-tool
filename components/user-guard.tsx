@@ -13,13 +13,13 @@ export default function UserGuard({ children }: PropsWithChildren) {
     !!u && (u.is_staff || u.is_superuser || u.role === "superadmin" || u.role === "admin");
 
   const checkUser = useEffectEvent(() => {
-    if (!isAuthorized(user)) {
+    if (!isLoading && !isAuthorized(user)) {
       router.replace("/auth");
     }
   });
   useEffect(() => {
     checkUser();
-  }, [user]);
+  }, [user, isLoading]);
 
   if (isLoading) {
     return (

@@ -1,7 +1,7 @@
 "use client";
 import { AddBuildingStepConfig } from "@/models/building";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { usePathname, useRouter } from "next/navigation";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   createContext,
   PropsWithChildren,
@@ -11,10 +11,12 @@ import {
   useEffectEvent,
   useTransition,
   useState,
+  useRef,
 } from "react";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { schema, type AddBuildingForm } from "./schema";
 import { STEPS } from "./step-lists";
+import { toast } from "sonner";
 
 interface AddBuildingContext {
   stepBadge: { current: number; total: number } | null;
@@ -31,11 +33,16 @@ interface AddBuildingContext {
   activeSubStep: AddBuildingStepConfig | undefined;
   isPending: boolean;
   startTransition: TransitionStartFunction;
-  /** UUID of the building created via the API during the add flow. */
   buildingUuid: string | null;
+  setCertFile: (file: File | null) => void;
+  setBoqFiles: (files: File[]) => void;
+  /** True when the current step requires a UUID but none exists yet */
+  missingUuid: boolean;
+  /** Called by the building details screen to tell context whether subtypes are available */
+  setSubtypesAvailable: (v: boolean) => void;
 }
 
-const AddBuildingContext = createContext<AddBuildingContext | undefined>(
+export const AddBuildingContext = createContext<AddBuildingContext | undefined>(
   undefined,
 );
 
@@ -49,13 +56,97 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
   );
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [buildingUuid, setBuildingUuid] = useState<string | null>(null);
+  const buildingUuidRef = useRef<string | null>(null);
+  const setUuid = (uuid: string | null) => {
+    buildingUuidRef.current = uuid;
+    setBuildingUuid(uuid);
+  };
 
-  const { handleSubmit, control, getValues, ...methods } = useForm<AddBuildingForm>({
-    resolver: zodResolver(schema),
+  // File state for step 1-2 uploads
+  const certFileRef = useRef<File | null>(null);
+  const boqFilesRef = useRef<File[]>([]);
+  const setCertFile = (file: File | null) => { certFileRef.current = file; };
+  const setBoqFiles = (files: File[]) => { boqFilesRef.current = files; };
+
+  // Whether the currently selected building type has subtypes (set by the details screen)
+  const subtypesAvailableRef = useRef(false);
+  const setSubtypesAvailable = (v: boolean) => { subtypesAvailableRef.current = v; };
+
+  const { handleSubmit, control, getValues, reset, ...methods } = useForm<AddBuildingForm>({
+    resolver: standardSchemaResolver(schema),
     mode: "onTouched",
   });
+
+  // Pre-populate form from detail API when we have a UUID
+  const populateFromDetail = async (uuid: string) => {
+    try {
+      const res = await fetch(`/api/buildings/${uuid}/detail`);
+      if (!res.ok) return;
+      const d = await res.json();
+      const core = d.core ?? d;
+      const sched = d.schedule ?? {};
+      reset({
+        ...getValues(),
+        buildingInformation: {
+          buildingNameLocation: {
+            nameOrCode: core.name ?? "",
+            address: core.street ?? "",
+            country: String(core.country?.id ?? ""),
+            region: String(core.region?.id ?? ""),
+            city: String(core.city?.id ?? ""),
+            longitude: core.longitude != null ? String(core.longitude) : "",
+            latitude: core.latitude != null ? String(core.latitude) : "",
+          },
+          buildingDetails: {
+            buildingTypeId: String(core.category?.category_id ?? ""),
+            apartmentTypeId: core.category?.subcategory_id ? String(core.category.subcategory_id) : undefined,
+            climateTypeId: core.climate_zone?.name ?? "",
+            assessmentPeriod: core.reference_period ?? undefined,
+            constructionYear: core.construction_year ? String(core.construction_year) : undefined,
+            totalFloorArea: core.total_floor_area ? Number(core.total_floor_area) : undefined,
+            conditionedFloorArea: core.cond_floor_area ? Number(core.cond_floor_area) : undefined,
+            numberOfFloorsBelowGround: core.floors_below_ground ?? undefined,
+            hasCertification: core.has_certification ? "yes" : "no",
+            hasBOQ: core.has_boq ? "yes" : "no",
+          },
+        },
+        operationalDetails: {
+          ...getValues().operationalDetails,
+          operationalScheduleTemperature: {
+            numberOfResidents: sched.num_residents ?? undefined,
+            annualOperatingSchedule: {
+              hours: sched.hours_per_workday ?? undefined,
+              days: sched.workdays_per_week ?? undefined,
+              weeks: sched.weeks_per_year ?? undefined,
+            },
+            roomHeatingTemperature: sched.heating_temp ?? undefined,
+            heatingTemperatureUnit: sched.heating_temp_unit ?? "celsius",
+            roomCoolingTemperature: sched.cooling_temp ?? undefined,
+            coolingTemperatureUnit: sched.cooling_temp_unit ?? "celsius",
+            renewableEnergyPercent: sched.renewable_energy_percent ?? undefined,
+            buildingSmartSystem: sched.building_smart_system ? "yes" : "no",
+          },
+        },
+      });
+    } catch {
+      // silently ignore — form stays empty
+    }
+  };
+
+  // On mount: if ?uuid= is in the URL (navigating back / deep-linking), restore state
+  useEffect(() => {
+    const uuid = searchParams.get("uuid");
+    if (uuid) {
+      setUuid(uuid);
+      populateFromDetail(uuid);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const uuidParam = buildingUuidRef.current ? `?uuid=${buildingUuidRef.current}` : "";
 
   const goBack = () => {
     let path = "/add-building";
@@ -92,7 +183,7 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       }
     }
     startTransition(() => {
-      router.push(path);
+      router.push(path + uuidParam);
     });
   };
 
@@ -119,18 +210,42 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       }
     }
     startTransition(() => {
-      router.push(path);
+      router.push(path + uuidParam);
     });
   };
 
   /**
-   * Call the appropriate API endpoint for the current step before navigating.
+   * Returns the next path to navigate to (with ?uuid= appended if we have one).
+   */
+  const getNextPath = (): string | null => {
+    let path = "/add-building";
+    if (activeSubStep && activeMainStep) {
+      if (activeSubStep.id < activeMainStep.steps!.length) {
+        path += activeMainStep.path + activeMainStep.steps?.[activeSubStep.id].path;
+      } else {
+        if (activeMainStep.id < STEPS.length + 1) {
+          path += STEPS[activeMainStep.id].path;
+        } else return null;
+      }
+    } else if (!activeSubStep && activeMainStep) {
+      if (activeMainStep.id < STEPS.length + 1) {
+        path += STEPS[activeMainStep.id].path;
+      } else return null;
+    }
+    const uuid = buildingUuidRef.current ?? buildingUuid;
+    if (uuid) path += `?uuid=${uuid}`;
+    return path;
+  };
+
+  /**
+   * Call the appropriate API endpoint for the current step.
+   * Returns true to navigate, false to block (only for steps 1-1 and 1-2).
    */
   const callStepApi = async (): Promise<boolean> => {
     if (!activeMainStep) return true;
-    // Main steps without sub-steps (steps 3 and 4)
+
+    // Steps without sub-steps (steps 3 and 4) — fire-and-forget
     if (!activeSubStep) {
-      // Step 3 — Operational Data Entry (Energy Carriers)
       if (activeMainStep.id === 3) {
         if (!buildingUuid) return true;
         const entries = getValues().operationalDataEntry ?? [];
@@ -154,7 +269,6 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
         return true;
       }
 
-      // Step 4 — Building Structural Components
       if (activeMainStep.id === 4) {
         if (!buildingUuid) return true;
         const components = getValues().buildingStructuralComponents ?? [];
@@ -194,7 +308,7 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
 
     const values = getValues();
 
-    // Step 1.1 — Building Name & Location
+    // Step 1.1 — Building Name & Location (blocking)
     if (activeMainStep.id === 1 && activeSubStep.id === 1) {
       const loc = values.buildingInformation?.buildingNameLocation;
       if (!loc) return true;
@@ -217,28 +331,76 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
 
         if (res.ok) {
           const data = await res.json().catch(() => null);
-          const uuid: string | null =
-            data?.building_uuid ?? data?.uuid ?? null;
-          if (uuid) setBuildingUuid(uuid);
+          const uuid: string | null = data?.building_uuid ?? data?.uuid ?? null;
+          if (uuid) {
+            setUuid(uuid);
+            // Persist UUID in URL so it survives navigation / refresh
+            const next = getNextPath();
+            if (next) {
+              startTransition(() => {
+                router.push(`${next}?uuid=${uuid}`);
+              });
+              return false; // we handled navigation ourselves
+            }
+            toast.success("Building location saved.");
+          }
+          return true;
         } else {
-          console.error(
-            "[add/name-location] failed:",
-            res.status,
-            await res.text().catch(() => ""),
-          );
+          const err = await res.json().catch(() => ({}));
+          toast.error(err?.detail ?? err?.building_name?.[0] ?? "Failed to save building location.");
+          return false;
         }
-      } catch (err) {
-        console.error("[add/name-location] network error:", err);
+      } catch {
+        toast.error("Network error. Please try again.");
+        return false;
       }
-      return true;
     }
 
-    // Step 1.2 — Building Details
+    // Step 1.2 — Building Details (blocking)
     if (activeMainStep.id === 1 && activeSubStep.id === 2) {
-      if (!buildingUuid) return true;
+      if (!buildingUuid) {
+        toast.error("No building found. Please complete step 1 first.");
+        return false;
+      }
       const details = values.buildingInformation?.buildingDetails;
       if (!details) return true;
 
+      if (subtypesAvailableRef.current && !details.apartmentTypeId) {
+        toast.error("Please select a type of apartments.");
+        return false;
+      }
+
+      // Upload files first — if they fail, don't save details
+      const certFile = certFileRef.current;
+      const boqFiles = boqFilesRef.current;
+      const hasCert = details.hasCertification === "yes";
+      const hasBoq = details.hasBOQ === "yes";
+
+      if (hasCert || hasBoq) {
+        const fd = new FormData();
+        fd.append("building_uuid", buildingUuid);
+        fd.append("has_certification", hasCert ? "yes" : "no");
+        fd.append("has_boq", hasBoq ? "yes" : "no");
+        if (hasCert && certFile) fd.append("certification_file", certFile);
+        if (hasBoq) boqFiles.forEach((f) => fd.append("boq_files", f));
+
+        try {
+          const fileRes = await fetch("/api/buildings/files", {
+            method: "POST",
+            body: fd,
+          });
+          if (!fileRes.ok) {
+            const err = await fileRes.json().catch(() => ({}));
+            toast.error(err?.error ?? "Failed to upload files. Please try again.");
+            return false;
+          }
+        } catch {
+          toast.error("File upload failed. Please try again.");
+          return false;
+        }
+      }
+
+      // Files succeeded (or not required) — now save details
       try {
         const res = await fetch("/api/buildings/add/details", {
           method: "POST",
@@ -259,24 +421,25 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
         });
 
         if (!res.ok) {
-          console.error(
-            "[add/details] failed:",
-            res.status,
-            await res.text().catch(() => ""),
-          );
+          const err = await res.json().catch(() => ({}));
+          toast.error(err?.detail ?? "Failed to save building details.");
+          return false;
         }
-      } catch (err) {
-        console.error("[add/details] network error:", err);
+
+        toast.success("Building details saved.");
+      } catch {
+        toast.error("Network error. Please try again.");
+        return false;
       }
+
       return true;
     }
 
-    // Step 2.1 — Operational Schedule & Temperature
+    // Steps 2.x — fire-and-forget
     if (activeMainStep.id === 2 && activeSubStep.id === 1) {
       if (!buildingUuid) return true;
       const sched = values.operationalDetails?.operationalScheduleTemperature;
       if (!sched) return true;
-
       try {
         await fetch("/api/buildings/add/operational-schedule", {
           method: "POST",
@@ -301,33 +464,69 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       return true;
     }
 
-    // Step 2.2 — Cooling Systems
     if (activeMainStep.id === 2 && activeSubStep.id === 2) {
       if (!buildingUuid) return true;
       const systems = values.operationalDetails?.coolingSystem ?? [];
-
       for (const system of systems) {
-        if (system.id) continue; // already saved
+        if (system.id) continue;
         try {
-          const isChiller = system.type === "chiller";
-          const d = system.data as Record<string, unknown>;
-          await fetch("/api/buildings/add/cooling-systems", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              building_uuid: buildingUuid,
-              cooling_system_type: isChiller ? "chiller" : "air_conditioner",
-              refrigerant_type: d.refrigerantType,
-              refrigerant_quantity: d.refrigerantQuantity,
-              total_cooling_load: d.totalCoolingLoad,
-              baseline_cooling_efficiency: d.baselineCoolingEfficiency,
-              baseline_leakage_factor: d.baselineLeakageFactor,
-              installation_of_heat_recovery_systems: d.installationOfHeatRecoverySystems,
-              installation_of_variable_speed_drives: d.installationOfVariableSpeedDrives,
-              year_of_installation: d.yearOfInstallation,
-              ...(isChiller ? {} : {}),
-            }),
-          });
+          if (system.type === "chiller") {
+            const c = system as import("./schema").ChillerSystem;
+            await fetch("/api/buildings/add/cooling-systems", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                building_uuid: buildingUuid,
+                cooling_system_type: "chiller",
+                chiller_system: c.chillerType,           // water-cooled / air-cooled
+                type_of_refrigerants: c.refrigerantType,
+                refrigerant_quantity: c.refrigerantQuantity,
+                total_cooling_load: c.totalCoolingLoad,
+                number_of_chillers: c.numberOfChillers,
+                baseline_leakage_factor: c.baselineLeakageFactor,
+                annual_operating_hours_per_day: c.operatingSchedule?.hours,
+                annual_operating_days_per_week: c.operatingSchedule?.days,
+                annual_operating_weeks_per_year: c.operatingSchedule?.weeks,
+                baseline_cooling_efficiency: c.baselineCoolingEfficiency,
+                installation_of_variable_speed_drives: c.installationOfVariableSpeedDrives ? "yes" : "no",
+                installation_of_heat_recovery_systems: c.installationOfHeatRecoverySystems ? "yes" : "no",
+                ipvl: c.iplv ?? undefined,
+                water_cooled_chiller_cooling_load_factor: c.waterCooledChillerCoolingLoadFactor ?? undefined,
+                total_chiller_system_power_input: c.totalChillerSystemPowerInput ?? undefined,
+                cop: c.cop ?? undefined,
+                energy_efficiency_label: c.energyEfficiencyLabel ?? undefined,
+                number_of_stars: c.numberOfStars ?? undefined,
+                // auto-calculated on backend; omit from payload (backend recalculates)
+              }),
+            });
+          } else {
+            const ac = system as import("./schema").AirConditionSystem;
+            await fetch("/api/buildings/add/cooling-systems", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                building_uuid: buildingUuid,
+                cooling_system_type: "air_conditioner",
+                type_of_air_condition: ac.acType,        // window / split / vrv / packaged
+                packaged_subtype: ac.packagedSubtype ?? undefined,
+                year_of_installation: ac.yearOfInstallation,
+                type_of_refrigerants: ac.refrigerantType,
+                refrigerant_quantity: ac.refrigerantQuantity,
+                cooling_capacity_per_unit: ac.coolingCapacityPerUnit,
+                cooling_capacity_unit: ac.coolingCapacityUnit,
+                number_of_units: ac.numberOfUnits,
+                baseline_leakage_factor: ac.baselineLeakageFactor,
+                hours_per_day: ac.operatingSchedule?.hours,
+                days_per_week: ac.operatingSchedule?.days,
+                weeks_per_year: ac.operatingSchedule?.weeks,
+                eer_iseer_cop: ac.eerIseerCop,
+                power_input_per_unit: ac.powerInputPerUnit ?? undefined,
+                energy_efficiency_label: ac.energyEfficiencyLabel ?? undefined,
+                number_of_stars: ac.numberOfStars ?? undefined,
+                // auto-calculated on backend; omit from payload
+              }),
+            });
+          }
         } catch (err) {
           console.error("[add/cooling-systems] network error:", err);
         }
@@ -335,11 +534,9 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       return true;
     }
 
-    // Step 2.3 — Ventilation Systems
     if (activeMainStep.id === 2 && activeSubStep.id === 3) {
       if (!buildingUuid) return true;
       const systems = values.operationalDetails?.ventilationSystem ?? [];
-
       for (const system of systems) {
         if (system.id) continue;
         try {
@@ -368,11 +565,9 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       return true;
     }
 
-    // Step 2.4 — Lighting Systems
     if (activeMainStep.id === 2 && activeSubStep.id === 4) {
       if (!buildingUuid) return true;
       const systems = values.operationalDetails?.lightingSystem ?? [];
-
       for (const system of systems) {
         if (system.id) continue;
         try {
@@ -403,13 +598,11 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       return true;
     }
 
-    // Step 2.5 — Lift & Escalator System
     if (activeMainStep.id === 2 && activeSubStep.id === 5) {
       if (!buildingUuid) return true;
       const systems = values.operationalDetails?.liftEscalatorSystem ?? [];
       const first = systems[0];
       if (!first || first.id) return true;
-
       try {
         await fetch("/api/buildings/add/lift-escalator", {
           method: "POST",
@@ -428,11 +621,9 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
       return true;
     }
 
-    // Step 2.6 — Hot Water Systems
     if (activeMainStep.id === 2 && activeSubStep.id === 6) {
       if (!buildingUuid) return true;
       const systems = values.operationalDetails?.hotWaterSystem ?? [];
-
       for (const system of systems) {
         if (system.id) continue;
         try {
@@ -466,39 +657,38 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
     return true;
   };
 
+  const isStep = (mainId: number, subId?: number) =>
+    activeMainStep?.id === mainId && (subId === undefined || activeSubStep?.id === subId);
+
   const next = () => {
-    let path = "/add-building";
-    if (activeSubStep && activeMainStep) {
-      if (activeSubStep.id < activeMainStep.steps!.length) {
-        path +=
-          activeMainStep.path + activeMainStep.steps?.[activeSubStep.id].path;
-      } else {
-        if (activeMainStep.id < STEPS.length + 1) {
-          path += STEPS[activeMainStep.id].path;
-        } else {
-          handleSubmit(onSubmit)();
-          return;
-        }
-      }
-    }
-    if (!activeSubStep && activeMainStep) {
-      if (activeMainStep.id < STEPS.length + 1) {
-        path += STEPS[activeMainStep.id].path;
-      } else {
-        handleSubmit(onSubmit)();
-        return;
-      }
+    const nextPath = getNextPath();
+    if (!nextPath) {
+      handleSubmit(onSubmit)();
+      return;
     }
 
-    // Fire-and-forget API call, then navigate.
-    callStepApi().finally(() => {
-      startTransition(() => {
-        router.push(path);
+    // Steps 1-1 and 1-2 are blocking — await before navigating
+    if (isStep(1, 1) || isStep(1, 2)) {
+      callStepApi().then((ok) => {
+        if (!ok) return;
+        // Recompute path after API call so buildingUuid is definitely current
+        const path = getNextPath() ?? nextPath;
+        startTransition(() => { router.push(path); });
       });
+      return;
+    }
+
+    // All other steps — fire-and-forget
+    callStepApi().finally(() => {
+      const path = getNextPath() ?? nextPath;
+      startTransition(() => { router.push(path); });
     });
   };
 
   const canSkip = (): boolean => {
+    // Steps 1-1 and 1-2 cannot be skipped
+    if (isStep(1, 1) || isStep(1, 2)) return false;
+
     if (activeSubStep) {
       return activeSubStep.id < activeMainStep!.steps!.length + 1;
     } else if (activeMainStep && !activeSubStep) {
@@ -532,37 +722,16 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
   });
 
   const completed: Record<string, boolean> = {
-    "1": !!schema.shape.buildingInformation.safeParse(buildingInformation)
-      .success,
-    "1-1":
-      !!schema.shape.buildingInformation.shape.buildingNameLocation.safeParse(
-        buildingInformation?.buildingNameLocation,
-      ).success,
-    "1-2": !!schema.shape.buildingInformation.shape.buildingDetails.safeParse(
-      buildingInformation?.buildingDetails,
-    ).success,
-    "2": !!schema.shape.operationalDetails.safeParse(operationalDetails)
-      .success,
-    "2-1":
-      !!schema.shape.operationalDetails.shape.operationalScheduleTemperature.safeParse(
-        operationalDetails?.operationalScheduleTemperature,
-      ).success,
-    "2-2": !!schema.shape.operationalDetails.shape.coolingSystem.safeParse(
-      operationalDetails?.coolingSystem,
-    ).success,
-    "2-3": !!schema.shape.operationalDetails.shape.ventilationSystem.safeParse(
-      operationalDetails?.ventilationSystem,
-    ).success,
-    "2-4": !!schema.shape.operationalDetails.shape.lightingSystem.safeParse(
-      operationalDetails?.lightingSystem,
-    ).success,
-    "2-5":
-      !!schema.shape.operationalDetails.shape.liftEscalatorSystem.safeParse(
-        operationalDetails?.liftEscalatorSystem,
-      ).success,
-    "2-6": !!schema.shape.operationalDetails.shape.hotWaterSystem.safeParse(
-      operationalDetails?.hotWaterSystem,
-    ).success,
+    "1": !!schema.shape.buildingInformation.safeParse(buildingInformation).success,
+    "1-1": !!schema.shape.buildingInformation.shape.buildingNameLocation.safeParse(buildingInformation?.buildingNameLocation).success,
+    "1-2": !!schema.shape.buildingInformation.shape.buildingDetails.safeParse(buildingInformation?.buildingDetails).success,
+    "2": !!schema.shape.operationalDetails.safeParse(operationalDetails).success,
+    "2-1": !!schema.shape.operationalDetails.shape.operationalScheduleTemperature.safeParse(operationalDetails?.operationalScheduleTemperature).success,
+    "2-2": !!schema.shape.operationalDetails.shape.coolingSystem.safeParse(operationalDetails?.coolingSystem).success,
+    "2-3": !!schema.shape.operationalDetails.shape.ventilationSystem.safeParse(operationalDetails?.ventilationSystem).success,
+    "2-4": !!schema.shape.operationalDetails.shape.lightingSystem.safeParse(operationalDetails?.lightingSystem).success,
+    "2-5": !!schema.shape.operationalDetails.shape.liftEscalatorSystem.safeParse(operationalDetails?.liftEscalatorSystem).success,
+    "2-6": !!schema.shape.operationalDetails.shape.hotWaterSystem.safeParse(operationalDetails?.hotWaterSystem).success,
   };
 
   const onSubmit = async (data: AddBuildingForm) => {
@@ -634,9 +803,14 @@ export const AddBuildingProvider = ({ children }: PropsWithChildren) => {
         isPending,
         startTransition,
         buildingUuid,
+        setCertFile,
+        setBoqFiles,
+        // Step 1-1 is the only step that doesn't need a UUID yet
+        missingUuid: !buildingUuid && !(activeMainStep?.id === 1 && activeSubStep?.id === 1),
+        setSubtypesAvailable,
       }}
     >
-      <FormProvider handleSubmit={handleSubmit} control={control} getValues={getValues} {...methods}>
+      <FormProvider handleSubmit={handleSubmit} control={control} getValues={getValues} reset={reset} {...methods}>
         <form onSubmit={handleSubmit(onSubmit)} className="w-full">
           {children}
         </form>

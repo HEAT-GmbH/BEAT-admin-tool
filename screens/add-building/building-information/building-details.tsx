@@ -4,15 +4,38 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { AddBuildingForm, schema } from "../schema";
 import FormInput from "@/components/form-input";
 import FormSelect from "@/components/form-select";
+import FormRadioGroup from "@/components/form-radio-group";
 import { apiService } from "@/services/api.service";
 import { useQuery } from "@tanstack/react-query";
+import { useContext, useEffect, useRef } from "react";
+import { AddBuildingContext } from "../context";
+import { EditBuildingContext } from "@/screens/edit-building/context";
+import { BuildingFileSection } from "@/components/building-file-section";
 
 export function BuildingDetailsScreen() {
-  const { control } = useFormContext<AddBuildingForm>();
+  const { control, setValue } = useFormContext<AddBuildingForm>();
+
+  // Works in both add and edit flows
+  const addCtx = useContext(AddBuildingContext);
+  const editCtx = useContext(EditBuildingContext);
+  const setCertFile = addCtx?.setCertFile ?? editCtx?.setCertFile ?? (() => {});
+  const setBoqFiles = addCtx?.setBoqFiles ?? editCtx?.setBoqFiles ?? (() => {});
+  const setSubtypesAvailable = addCtx?.setSubtypesAvailable ?? editCtx?.setSubtypesAvailable ?? (() => {});
+  const buildingUuid = addCtx?.buildingUuid ?? editCtx?.buildingUuid ?? null;;
 
   const buildingTypeId = useWatch({
     control,
     name: "buildingInformation.buildingDetails.buildingTypeId",
+  });
+
+  const hasCertification = useWatch({
+    control,
+    name: "buildingInformation.buildingDetails.hasCertification",
+  });
+
+  const hasBoq = useWatch({
+    control,
+    name: "buildingInformation.buildingDetails.hasBOQ",
   });
 
   const { data: buildingTypesData, isLoading: isLoadingBuildingTypes } = useQuery({
@@ -27,54 +50,77 @@ export function BuildingDetailsScreen() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: apartmentTypesData, isLoading: isLoadingApartmentTypes } = useQuery({
+    queryKey: ["apartment-types", buildingTypeId],
+    queryFn: () => apiService.getApartmentTypes(buildingTypeId!),
+    enabled: !!buildingTypeId,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const buildingTypes = (buildingTypesData?.data ?? []).map((bt) => ({
     item: bt.name,
     value: String(bt.id),
   }));
 
-  const selectedBuildingType = (buildingTypesData?.data ?? []).find(
-    (bt) => String(bt.id) === buildingTypeId,
-  );
-
-  const apartmentTypes = (selectedBuildingType?.subtypes ?? []).map((st) => ({
+  const apartmentTypes = (apartmentTypesData ?? []).map((st) => ({
     item: st.name,
     value: String(st.id),
   }));
 
+  const isFirstRender = useRef(true);
+  // Clear apartment type whenever building type changes (but not on initial render)
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    setValue("buildingInformation.buildingDetails.apartmentTypeId", undefined);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buildingTypeId]);
+
+  // Keep context informed about whether subtypes are available for the current building type
+  useEffect(() => {
+    setSubtypesAvailable(apartmentTypes.length > 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apartmentTypes.length]);
 
   const climateTypes = (climateTypesData?.data ?? []).map((ct) => ({
     item: ct.name,
-    value: String(ct.id),
+    value: ct.name,
   }));
 
   return (
     <section className="grid grid-cols-2 gap-x-4.5 gap-y-2.25">
-      <div className="col-span-2">
-        <FormSelect
-          name="buildingInformation.buildingDetails.buildingTypeId"
-          id="building-type"
-          label="Building type"
-          placeholder={isLoadingBuildingTypes ? "Loading..." : "Select building type"}
-          control={control}
-          schema={schema}
-          items={buildingTypes}
-          disabled={isLoadingBuildingTypes}
-        />
-      </div>
+      <FormSelect
+        name="buildingInformation.buildingDetails.buildingTypeId"
+        id="building-type"
+        label="Building type"
+        placeholder={isLoadingBuildingTypes ? "Loading..." : "Select building type"}
+        control={control}
+        schema={schema}
+        items={buildingTypes}
+        disabled={isLoadingBuildingTypes}
+      />
 
-      {apartmentTypes.length > 0 && (
-        <div className="col-span-2">
-          <FormSelect
-            name="buildingInformation.buildingDetails.apartmentTypeId"
-            id="apartment-type"
-            label="Type of apartments"
-            placeholder="Select apartment type"
-            control={control}
-            schema={schema}
-            items={apartmentTypes}
-          />
-        </div>
-      )}
+      <FormSelect
+        name="buildingInformation.buildingDetails.apartmentTypeId"
+        id="apartment-type"
+        label="Type of apartments"
+        placeholder={
+          !buildingTypeId
+            ? "Select building type first"
+            : isLoadingApartmentTypes
+            ? "Loading..."
+            : apartmentTypes.length === 0
+            ? "No subtypes available"
+            : "Select apartment type"
+        }
+        control={control}
+        schema={schema}
+        items={apartmentTypes}
+        disabled={!buildingTypeId || isLoadingApartmentTypes || apartmentTypes.length === 0}
+        fieldRequired={apartmentTypes.length > 0}
+      />
 
       <div className="col-span-2">
         <FormSelect
@@ -150,31 +196,53 @@ export function BuildingDetailsScreen() {
         schema={schema}
       />
 
-      <FormSelect
+      <FormRadioGroup
         name="buildingInformation.buildingDetails.hasCertification"
         id="has-certification"
         label="Has the building's certification process underway/been completed?"
-        placeholder="Select"
         control={control}
         schema={schema}
         items={[
-          { item: "Yes", value: "yes" },
-          { item: "No", value: "no" },
+          { label: "Yes", value: "yes" },
+          { label: "No", value: "no" },
         ]}
       />
 
-      <FormSelect
+      <FormRadioGroup
         name="buildingInformation.buildingDetails.hasBOQ"
         id="has-boq"
         label="Does the building have design drawings and Bill of Quantities (BoQ)?"
-        placeholder="Select"
         control={control}
         schema={schema}
         items={[
-          { item: "Yes", value: "yes" },
-          { item: "No", value: "no" },
+          { label: "Yes", value: "yes" },
+          { label: "No", value: "no" },
         ]}
       />
+
+      {hasCertification === "yes" && (
+        <div className="col-span-2">
+          <BuildingFileSection
+            label="Certification file"
+            buildingUuid={buildingUuid}
+            fileType="certification"
+            multiple={false}
+            onFilesChange={(files) => setCertFile(files[0] ?? null)}
+          />
+        </div>
+      )}
+
+      {hasBoq === "yes" && (
+        <div className="col-span-2">
+          <BuildingFileSection
+            label="Design drawings / BoQ files"
+            buildingUuid={buildingUuid}
+            fileType="boq"
+            multiple={true}
+            onFilesChange={(files) => setBoqFiles(files)}
+          />
+        </div>
+      )}
     </section>
   );
 }

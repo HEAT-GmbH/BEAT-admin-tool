@@ -1,37 +1,43 @@
 import { zodNumber } from "@/constants/zod";
 import * as z from "zod";
 
+const zodPositiveInt = (min: number, max: number, label: string) =>
+  z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().int().min(min, `${label} must be at least ${min}`).max(max, `${label} must be at most ${max}`)
+  );
+
 const hoursDaysWeeks = z.object({
-  hours: zodNumber,
-  days: zodNumber,
-  weeks: zodNumber,
+  hours: zodPositiveInt(1, 24, "Hours per day"),
+  days: zodPositiveInt(1, 7, "Days per week"),
+  weeks: zodPositiveInt(1, 52, "Weeks per year"),
 })
 
 export const chillerSystemSchema = z.object({
   id: z.string().optional(),
   type: z.literal("chiller"),
-  data: z.object({
-    type: z.string().min(1),
-    yearOfInstallation: z.string().min(1),
-    refrigerantType: z.string().min(1),
-    refrigerantQuantity: zodNumber,
-    installationOfVariableSpeedDrives: z.boolean(),
-    installationOfHeatRecoverySystems: z.boolean(),
-    totalCoolingLoad: zodNumber,
-    baselineLeakageFactor: zodNumber.optional(),
-    systemOperatingScehdule: hoursDaysWeeks.optional(),
-    baselineCoolingEfficiency: zodNumber,
-  }),
-  otherDetails: z.object({
-    numberOfChillers: zodNumber.optional(),
-    totalChillerSystemPowerInput: zodNumber.optional(),
-    waterCooledChillerCoolingLoadFactor: zodNumber.optional(),
-    cop: zodNumber.optional(),
-    iplv: zodNumber.optional(),
-    energyEfficiencyLabel: z.string().min(1).optional(),
-    numberOfStars: z.string().min(1).optional(),
-    totalEnergyConsumptionAnnually: zodNumber.optional(),
-  }).optional(),
+  // chiller sub-type: water-cooled or air-cooled
+  chillerType: z.enum(["water-cooled", "air-cooled"]),
+  yearOfInstallation: z.string().min(1, "Year of installation is required"),
+  refrigerantType: z.string().min(1, "Refrigerant type is required"),
+  refrigerantQuantity: zodNumber,
+  totalCoolingLoad: zodNumber,
+  numberOfChillers: zodNumber,
+  baselineLeakageFactor: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().min(0).max(100)
+  ),
+  operatingSchedule: hoursDaysWeeks,
+  baselineCoolingEfficiency: zodNumber,
+  installationOfVariableSpeedDrives: z.boolean(),
+  installationOfHeatRecoverySystems: z.boolean(),
+  // optional other details
+  iplv: zodNumber.optional(),
+  waterCooledChillerCoolingLoadFactor: zodNumber.optional(),
+  totalChillerSystemPowerInput: zodNumber.optional(),
+  cop: zodNumber.optional(),
+  energyEfficiencyLabel: z.string().optional(),
+  numberOfStars: z.string().optional(),
 });
 
 export type ChillerSystem = z.infer<typeof chillerSystemSchema>;
@@ -39,25 +45,29 @@ export type ChillerSystem = z.infer<typeof chillerSystemSchema>;
 export const airConditionSystemSchema = z.object({
   id: z.string().optional(),
   type: z.literal("air-condition"),
-  data: z.object({
-    type: z.string().min(1),
-    yearOfInstallation: z.string().min(1),
-    refrigerantType: z.string().min(1),
-    refrigerantQuantity: zodNumber,
-    totalCoolingLoad: zodNumber,
-    baselineLeakageFactor: zodNumber.optional(),
-    systemOperatingScehdule: hoursDaysWeeks.optional(),
-  }),
-  otherDetails: z.object({
-    totalSplitVRVUnits: zodNumber.optional(),
-    totalSplitVRVSystem: zodNumber.optional(),
-    totalEnergyConsumptionAnnually: zodNumber.optional(),
-    baselineSplitVRVEfficiency: zodNumber.optional(),
-    iseerRating: zodNumber.optional(),
-    cop: zodNumber.optional(),
-    energyEfficiencyLabel: z.string().min(1).optional(),
-    numberOfStars: z.string().min(1).optional(),
-  }).optional(),
+  // ac sub-type: window / split / vrv / packaged
+  acType: z.enum(["window", "split", "vrv", "packaged"]),
+  // packaged only
+  packagedSubtype: z.string().optional(),
+  yearOfInstallation: z.string().min(1, "Year of installation is required"),
+  refrigerantType: z.string().min(1, "Refrigerant type is required"),
+  refrigerantQuantity: zodNumber,
+  coolingCapacityPerUnit: zodNumber,
+  coolingCapacityUnit: z.enum(["ton", "btu_hr", "kw"]),
+  numberOfUnits: zodNumber,
+  baselineLeakageFactor: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().min(0).max(100)
+  ),
+  operatingSchedule: hoursDaysWeeks,
+  eerIseerCop: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.coerce.number().min(0.01, "Must be greater than 0")
+  ),
+  // optional other details
+  powerInputPerUnit: zodNumber.optional(),
+  energyEfficiencyLabel: z.string().optional(),
+  numberOfStars: z.string().optional(),
 });
 
 export type AirConditionSystem = z.infer<typeof airConditionSystemSchema>;
@@ -193,37 +203,52 @@ export type BuildingStructuralComponent = z.infer<typeof buildingStructuralCompo
 export const schema = z.object({
   buildingInformation: z.object({
     buildingNameLocation: z.object({
-      nameOrCode: z.string().min(1),
-      address: z.string().min(1),
-      region: z.string().min(1),
-      city: z.string().min(1),
-      country: z.string().min(1),
-      longitude: z.string().optional(),
-      latitude: z.string().optional(),
+      nameOrCode: z.string().min(2, "Building name must be at least 2 characters"),
+      address: z.string().min(5, "Address is required (minimum 5 characters)"),
+      region: z.string().min(1, "Please select a region or state"),
+      city: z.string().min(1, "Please select a city"),
+      country: z.string().min(1, "Please select a country"),
+      longitude: z.string().optional().refine(
+        (v) => !v || (!isNaN(Number(v)) && Number(v) >= -180 && Number(v) <= 180),
+        { message: "Longitude must be between -180 and 180" },
+      ),
+      latitude: z.string().optional().refine(
+        (v) => !v || (!isNaN(Number(v)) && Number(v) >= -90 && Number(v) <= 90),
+        { message: "Latitude must be between -90 and 90" },
+      ),
     }),
     buildingDetails: z.object({
-      buildingTypeId: z.string().min(1),
+      buildingTypeId: z.string().min(1, "Please select a building type"),
       apartmentTypeId: z.string().optional(),
-      climateTypeId: z.string().min(1),
+      climateTypeId: z.string().min(1, "Please select a climate type"),
       assessmentPeriod: zodNumber,
-      constructionYear: z.string().optional(),
+      constructionYear: z.string().optional().refine(
+        (v) => !v || (/^\d{4}$/.test(v) && Number(v) >= 1900 && Number(v) <= new Date().getFullYear()),
+        { message: `Construction year must be between 1900 and ${new Date().getFullYear()}` },
+      ),
       totalFloorArea: zodNumber,
       conditionedFloorArea: zodNumber.optional(),
       numberOfFloorsBelowGround: zodNumber.optional(),
-      hasCertification: z.string().min(1),
-      hasBOQ: z.string().min(1),
+      hasCertification: z.string().min(1, "Please select an option"),
+      hasBOQ: z.string().min(1, "Please select an option"),
     }),
   }),
   operationalDetails: z.object({
     operationalScheduleTemperature: z.object({
-      numberOfResidents: zodNumber,
+      numberOfResidents: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.coerce.number().int().min(1, "Must be at least 1")
+      ),
       annualOperatingSchedule: hoursDaysWeeks,
       roomHeatingTemperature: zodNumber,
       heatingTemperatureUnit: z.string().min(1),
       roomCoolingTemperature: zodNumber,
       coolingTemperatureUnit: z.string().min(1),
-      renewableEnergyPercent: zodNumber.optional(),
-      buildingSmartSystem: z.string().min(1),
+      renewableEnergyPercent: z.preprocess(
+        (val) => (val === "" ? undefined : val),
+        z.coerce.number().min(0.01, "Must be greater than 0").max(100, "Must be at most 100")
+      ),
+      buildingSmartSystem: z.string().min(1, "Please select an option"),
     }),
     coolingSystem: z.array(
       z.discriminatedUnion("type", [

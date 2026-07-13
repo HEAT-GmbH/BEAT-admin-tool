@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export const AddBuilding = ({ className }: { className?: string }) => {
   return (
-    <Link href="/add-building" prefetch>
+    <Link href="/add-building/building-information/building-name-location" prefetch>
       <Button className={cn("rounded-[0.625rem] p-2.5", className)}>
         <Icon name="add-large-fill" />
         Add Building

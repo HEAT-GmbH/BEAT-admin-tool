@@ -2,7 +2,7 @@
 import { UploadComponent } from "@/components/upload";
 import { useEffectEvent } from "react";
 import { useSteps, ParsedSheet } from "./steps.context";
-import { read, utils } from "xlsx";
+import ExcelJS from "exceljs";
 
 export const Upload = () => {
   const { toggleComplete, item, setStep, setParsedSheets } = useSteps();
@@ -10,32 +10,29 @@ export const Upload = () => {
     toggleComplete(item.id, true);
   });
 
-  const handleFileSelect = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result;
-        const workbook = read(data, { type: "array" });
+  const handleFileSelect = async (file: File) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
 
-        const sheets: ParsedSheet[] = workbook.SheetNames.map((name) => {
-          const sheet = workbook.Sheets[name];
-          // sheet_to_json with header:1 gives array-of-arrays
+      const sheets: ParsedSheet[] = workbook.worksheets.map((worksheet) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const rows: any[][] = [];
+        worksheet.eachRow({ includeEmpty: true }, (row) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const rows: any[][] = utils.sheet_to_json(sheet, {
-            header: 1,
-            defval: null,
-          });
-          return { name, rows };
+          const values = (row.values as any[]).slice(1); // index 0 is always null in exceljs
+          rows.push(values.map((v) => (v === undefined ? null : v)));
         });
+        return { name: worksheet.name, rows };
+      });
 
-        setParsedSheets(sheets);
-        completionEvent();
-        setStep((prev) => prev + 1);
-      } catch (err) {
-        console.error("Failed to parse Excel file:", err);
-      }
-    };
-    reader.readAsArrayBuffer(file);
+      setParsedSheets(sheets);
+      completionEvent();
+      setStep((prev) => prev + 1);
+    } catch (err) {
+      console.error("Failed to parse Excel file:", err);
+    }
   };
 
   return (
